@@ -282,11 +282,11 @@ body.light-theme {
 }
 
 .app-header {
-  height: 48px;
-  padding: 0 16px;
+  height: 44px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   background:
     linear-gradient(180deg, rgba(13, 62, 92, 0.18), rgba(13, 62, 92, 0.04)),
     var(--bg-secondary);
@@ -361,6 +361,7 @@ body.light-theme {
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .header-action-btn,
@@ -609,30 +610,6 @@ body.light-theme {
 .canvas-flow-shell {
   position: absolute;
   inset: 0 0 0 0;
-}
-
-.canvas-fit-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  z-index: 12;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-glass);
-  backdrop-filter: blur(10px);
-  color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: color 0.18s ease, border-color 0.18s ease;
-}
-
-.canvas-fit-btn:hover {
-  color: var(--text-primary);
-  border-color: rgba(155, 200, 66, 0.35);
 }
 
 /* React Flow v12 ships with --xy-background-color-default: #141414 in

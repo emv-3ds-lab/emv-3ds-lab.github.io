@@ -189,9 +189,9 @@ function AppContent() {
   const [hasLoadedSharedState, setHasLoadedSharedState] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  // Collapsible Sidebars state
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  // Collapsible Sidebars state - both collapsed by default for a clean canvas-first view
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(true);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(true);
   const [isScenarioToolbarCollapsed, setIsScenarioToolbarCollapsed] = useState(true);
   const [securityLensEnabled, setSecurityLensEnabled] = useState(false);
 
@@ -352,7 +352,6 @@ function AppContent() {
   );
   const currentStep = fallbackStep;
   const isProfilingActive = currentStep && (currentStep.num === '3b' || currentStep.num.startsWith('4'));
-  const currentGroupMeta = currentStep?.groupId ? STEP_GROUPS.find((g) => g.id === currentStep.groupId) : undefined;
   const activeGroups = useMemo(
     () => STEP_GROUPS.filter((group) => activeSteps.some((step) => step.groupId === group.id)),
     [activeSteps]
@@ -929,13 +928,6 @@ function AppContent() {
     setDetailsContext({ kind: 'glossary' });
   };
 
-  const jumpToGroup = (groupId: StepGroupId) => {
-    const idx = activeSteps.findIndex((step) => step.groupId === groupId);
-    if (idx !== -1) {
-      handleStepSelectFromTimeline(idx);
-    }
-  };
-
   const applyScenarioPreset = (preset: ScenarioPreset) => {
     setScenario(preset.scenario);
     setIsPlaying(false);
@@ -980,25 +972,7 @@ function AppContent() {
           )}
         </div>
 
-        <div className="header-phase-rail">
-          {activeGroups.map((group) => (
-            <button
-              key={group.id}
-              type="button"
-              className={`phase-pill ${currentGroupMeta?.id === group.id ? 'active' : ''}`}
-              onClick={() => jumpToGroup(group.id)}
-              title={group.description}
-            >
-              <span className="phase-pill-swatch" style={{ background: group.color }} />
-              <span>{group.title}</span>
-            </button>
-          ))}
-        </div>
-
         <div className="header-actions">
-          <span className="header-step-indicator">
-            {currentStepIndex + 1}<span className="step-sep">/</span>{activeSteps.length}
-          </span>
           <button
             onClick={() => void copyShareLink()}
             className="header-action-btn"
@@ -1123,14 +1097,6 @@ function AppContent() {
             title={isRightCollapsed ? "Expand Right Panel" : "Collapse Right Panel"}
           >
             {isRightCollapsed ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
-
-          <button
-            className="canvas-fit-btn"
-            onClick={() => fitView({ padding: 0.12, duration: 250 })}
-            title="Fit diagram to view"
-          >
-            Fit
           </button>
 
           <div className="canvas-flow-shell">
