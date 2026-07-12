@@ -1,0 +1,37 @@
+{
+  "name": "3d-diagrams",
+  "description": "A vendor-neutral visual lab for understanding, comparing, and debugging EMV 3-D Secure flows.",
+  "private": false,
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "keywords": [
+    "emv-3ds",
+    "3d-secure",
+    "payment-security",
+    "protocol-lab",
+    "react-flow"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.11.2",
+    "html-to-image": "^1.11.13",
+    "lucide-react": "^1.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "oxlint": "^1.71.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1"
+  }
+}

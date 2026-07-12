@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.DS_Store
+Thumbs.db
+.env
+.env.*
+!.env.example
+coverage/
+.vite/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local research/reference notes that should stay out of the repo.
+local-notes/
+prism-uploads/
+main.tex
+core-spec-extracted.txt

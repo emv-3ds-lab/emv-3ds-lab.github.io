@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+title: EMV 3DS Protocol Lab
+message: Please cite this project when it helps your research, documentation, or teaching.
+type: software
+authors:
+  - family-names: Wasif
+    given-names: C S
+repository-code: https://github.com/cswasif/3d-diagrams
+url: https://github.com/cswasif/3d-diagrams
+abstract: >
+  A vendor-neutral visual lab for understanding, comparing, and debugging
+  EMV 3-D Secure flows through scenario-driven diagrams, message inspection,
+  and protocol-oriented explanation.
+keywords:
+  - emv-3ds
+  - 3d-secure
+  - protocol-lab
+  - payment-security
+  - sequence-diagrams
+license: AGPL-3.0-only
