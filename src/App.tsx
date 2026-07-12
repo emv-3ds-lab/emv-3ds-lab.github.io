@@ -156,13 +156,14 @@ function AppContent() {
   const snapshotFileInputRef = useRef<HTMLInputElement>(null);
   const snapshotImportTimerRef = useRef<number | null>(null);
 
-  // Apply theme to the document body.
+  // Apply theme to the document body. We swap both `light-theme` and
+  // `security-theme` together so the body never carries stale classes
+  // from a previous selection (e.g. switching security→light must
+  // remove the security class, not just add light on top).
   useEffect(() => {
-    if (theme === 'light') {
-      document.body.classList.add('light-theme');
-    } else {
-      document.body.classList.remove('light-theme');
-    }
+    document.body.classList.remove('light-theme', 'security-theme');
+    if (theme === 'light') document.body.classList.add('light-theme');
+    else if (theme === 'security') document.body.classList.add('security-theme');
   }, [theme]);
 
   // Detect prefers-reduced-motion so we can dampen autoplay + animations.
