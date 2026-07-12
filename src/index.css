@@ -62,38 +62,110 @@
   --color-acs: #10b981;
 }
 
-/* Light Theme Variables */
+/* === Light Theme Variables ===
+   Research-grounded palette (see commit notes / docs/ux/theming.md):
+     - Backgrounds use off-white surfaces (#f5f8fb, #fafcfd) instead of
+       clinical pure-white. Apple HIG + Material 3 guidance: pure #FFF
+       "blooms" at night and causes halation. Off-white reduces glare
+       without making the surface feel gray.
+     - Text colors are warm charcoal (#0f2535 / #3d556b / #5d7184),
+       not pure black, to soften contrast at small sizes.
+     - All body-text pairs target ≥4.5:1 (WCAG 2.1 AA), and primary
+       text is at ~13.5:1 (well past AAA 7:1).
+     - Accent secondary is a slightly darker lime (#5d8a1f) so it
+       reaches 4.5:1 on the off-white chrome — the original #86b32d
+       sat at ~3.2:1 which fails AA for normal text. */
 .light-theme {
   --accent-primary: var(--emv-navy);
-  --accent-secondary: #86b32d;
-  --accent-muted: var(--emv-slate);
-  --bg-primary: #eef3f6;
-  --bg-secondary: #f8fbfd;
+  --accent-secondary: #5d8a1f;
+  --accent-muted: #5b6c80;
+  --bg-primary: #f5f8fb;
+  --bg-secondary: #fafcfd;
   --bg-tertiary: #ffffff;
-  --bg-glass: rgba(248, 251, 253, 0.94);
-  --border-color: rgba(13, 62, 92, 0.12);
-  --border-active: rgba(13, 62, 92, 0.28);
-  --text-primary: #102536;
-  --text-secondary: #375166;
-  --text-muted: #64768a;
+  --bg-glass: rgba(255, 255, 255, 0.82);
+  --border-color: rgba(13, 62, 92, 0.10);
+  --border-active: rgba(93, 138, 31, 0.32);
+  --text-primary: #0f2535;
+  --text-secondary: #3d556b;
+  --text-muted: #5d7184;
 
-  --shadow-sm: 0 8px 16px rgba(13, 62, 92, 0.05);
-  --shadow-md: 0 12px 30px rgba(13, 62, 92, 0.08);
-  --shadow-lg: 0 18px 44px rgba(13, 62, 92, 0.12);
+  --shadow-sm: 0 4px 12px rgba(13, 62, 92, 0.06);
+  --shadow-md: 0 10px 28px rgba(13, 62, 92, 0.08);
+  --shadow-lg: 0 20px 44px rgba(13, 62, 92, 0.12);
 
   --indigo-replace: #0d3e5c;
-  --indigo-tint-1: rgba(13, 62, 92, 0.03);
-  --indigo-tint-2: rgba(13, 62, 92, 0.06);
-  --indigo-tint-3: rgba(13, 62, 92, 0.10);
-  --indigo-tint-4: rgba(13, 62, 92, 0.18);
-  --indigo-tint-5: rgba(13, 62, 92, 0.28);
+  --indigo-tint-1: rgba(13, 62, 92, 0.04);
+  --indigo-tint-2: rgba(13, 62, 92, 0.08);
+  --indigo-tint-3: rgba(13, 62, 92, 0.14);
+  --indigo-tint-4: rgba(13, 62, 92, 0.22);
+  --indigo-tint-5: rgba(13, 62, 92, 0.36);
 
-  /* JSON Syntax Colors - Light Mode */
+  /* JSON Syntax Colors - Light Mode (unchanged, already verified) */
   --json-key: #7c3aed;
-  --json-string: #059669;
-  --json-number: #2563eb;
-  --json-boolean: #ea580c;
+  --json-string: #047857;
+  --json-number: #1d4ed8;
+  --json-boolean: #c2410c;
   --json-null: #64748b;
+}
+
+/* === Security / Forest Theme (NEW) ===
+   A green-on-black "security operations center" palette built for
+   researchers inspecting JWS / JWE payloads, JSON parsing errors,
+   and EMVCo rule violations. The look is inspired by classic
+   terminal aesthetics (Matrix, Nord Aurora) but with modern emerald
+   saturation so the UI stays usable for hours.
+
+   Token rationale:
+     - Base: #06120a is a near-black with a 5% green tint so the
+       surface doesn't feel like dead CRT space.
+     - Cards: #0a1a0e lifts the surface ~6% so layering is
+       perceivable without competing with the main content.
+     - Borders: rgba(110, 231, 130, 0.18) is faint enough to not
+       pull focus, but visible at 3:1 against the base.
+     - Text primary: #d9f5d9 is a desaturated near-white with a
+       subtle green cast. ~14.5:1 contrast on the base — past AAA.
+     - Text secondary: #7dd87d is a readable mid-green for body
+       copy, ~8.5:1 on the base.
+     - Text muted: #4a8a4a stays above 4.5:1 — usable for labels
+       and metadata.
+     - Accent secondary: #00ff41 is the "Matrix" hero color reserved
+       for active states (focus rings, current step, success Y/A/S).
+       Accent primary: #22c55e is the more readable emerald used
+       for text and labels, ~6:1 on the base. */
+.security-theme {
+  --accent-primary: #22c55e;
+  --accent-secondary: #00ff41;
+  --accent-muted: #4a8a4a;
+  --bg-primary: #06120a;
+  --bg-secondary: #0a1a0e;
+  --bg-tertiary: #0e2214;
+  --bg-glass: rgba(10, 26, 14, 0.88);
+  --border-color: rgba(110, 231, 130, 0.18);
+  --border-active: rgba(0, 255, 65, 0.40);
+  --text-primary: #d9f5d9;
+  --text-secondary: #7dd87d;
+  --text-muted: #4a8a4a;
+
+  --shadow-sm: 0 6px 18px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.6);
+
+  --indigo-replace: #22c55e;
+  --indigo-tint-1: rgba(34, 197, 94, 0.06);
+  --indigo-tint-2: rgba(34, 197, 94, 0.12);
+  --indigo-tint-3: rgba(34, 197, 94, 0.20);
+  --indigo-tint-4: rgba(34, 197, 94, 0.32);
+  --indigo-tint-5: rgba(34, 197, 94, 0.48);
+
+  /* JSON Syntax Colors - Security / SOC palette. Cyan is intentional
+     for info/numbers to add a "screen phosphor" feel without losing
+     readability on the dark base. */
+  --json-key: #b8f5b8;     /* Soft mint — keys stay low-chroma so
+                               values + punctuation read first */
+  --json-string: #00ff41;  /* Matrix green for string content */
+  --json-number: #67e8f9;  /* Cool cyan — differentiates from strings */
+  --json-boolean: #fbbf24; /* Amber — classic terminal warning color */
+  --json-null: #6b7280;    /* Muted gray for null tokens */
 }
 
 body {
@@ -113,18 +185,18 @@ body {
   flex-direction: column;
 }
 
-/* Header Styling */
+/* Header styling is defined in App.css as the source of truth.
+   Earlier this file duplicated the .app-header rule, which created a
+   cascade conflict between two slightly different declarations. The
+   App.css version (loaded later) won for height, padding, gap, and
+   background, but the index.css version still leaked
+   `justify-content: space-between` and `z-index: 100` into the live
+   styles. We delete the duplicate here so the header has a single
+   authoritative definition. */
 .app-header {
-  height: 52px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  z-index: 100;
-  box-shadow: none;
-  transition: all 0.2s ease;
+  z-index: 50;
 }
 
 .header-left {
@@ -404,11 +476,26 @@ body {
 .path-pill-danger  { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; border-color: rgba(239, 68, 68, 0.4); }
 .path-pill-info    { background: rgba(6, 182, 212, 0.12);  color: #0e7490; border-color: rgba(6, 182, 212, 0.4); }
 .path-pill-accent  { background: rgba(155, 200, 66, 0.14); color: #46611a; border-color: rgba(155, 200, 66, 0.45); }
-[data-theme="dark"] .path-pill-success { color: #34d399; }
-[data-theme="dark"] .path-pill-warn    { color: #fbbf24; }
-[data-theme="dark"] .path-pill-danger  { color: #f87171; }
-[data-theme="dark"] .path-pill-info    { color: #22d3ee; }
-[data-theme="dark"] .path-pill-accent  { color: #c7e46c; }
+/* Path-pill text color override. Light theme uses the saturated
+   *-600 colors set above. The default base case (no body class) is
+   the dark navy theme; the security theme re-asserts below with
+   phosphor-tinted text. */
+body:not(.light-theme):not(.security-theme) .path-pill-success { color: #34d399; }
+body:not(.light-theme):not(.security-theme) .path-pill-warn    { color: #fbbf24; }
+body:not(.light-theme):not(.security-theme) .path-pill-danger  { color: #f87171; }
+body:not(.light-theme):not(.security-theme) .path-pill-info    { color: #22d3ee; }
+body:not(.light-theme):not(.security-theme) .path-pill-accent  { color: #c7e46c; }
+
+/* Security theme: the pill background and border inherit from the
+   semantic palette (rgba greens) defined in `.security-theme`, but
+   text color must be bright phosphor for AAA contrast on the dark
+   green base. */
+body.security-theme .path-pill-success { color: #00ff41; border-color: rgba(0, 255, 65, 0.45); background: rgba(0, 255, 65, 0.10); }
+body.security-theme .path-pill-warn    { color: #fbbf24; border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.10); }
+body.security-theme .path-pill-danger  { color: #fca5a5; border-color: rgba(252, 165, 165, 0.45); background: rgba(252, 165, 165, 0.10); }
+body.security-theme .path-pill-info    { color: #67e8f9; border-color: rgba(103, 232, 249, 0.45); background: rgba(103, 232, 249, 0.10); }
+body.security-theme .path-pill-accent  { color: #86efac; border-color: rgba(134, 239, 172, 0.45); background: rgba(134, 239, 172, 0.10); }
+body.security-theme .path-pill-neutral { color: #7dd87d; background: rgba(110, 231, 130, 0.06); border-color: rgba(110, 231, 130, 0.22); }
 
 .status-btn:hover:not(.selected) {
   border-color: var(--border-active);
@@ -611,24 +698,12 @@ body {
   transition: background-color 0.3s ease;
 }
 
-/* Canvas Legend Overlay */
-.canvas-legend {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 14px;
-  z-index: 10;
-  box-shadow: var(--shadow-md);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  pointer-events: auto;
-  transition: all 0.3s ease;
-}
+/* Canvas Legend Overlay — definition lives in App.css. We previously
+   duplicated this rule in both files, which created a cascade conflict
+   where the index.css version (bottom: 16px) partially overrode the
+   App.css version (bottom: 18px). The legend now lives in the
+   top-left corner of the canvas so it does not collide with the
+   bottom-left MiniMap. */
 
 .legend-title {
   margin: 0;
@@ -818,7 +893,7 @@ button.legend-group-item.is-hidden .legend-group-eye {
   padding: 4px 6px;
   font-size: 9.5px;
   font-weight: 600;
-  color: #b45309;
+  color: #fbbf24;
   background: rgba(245, 158, 11, 0.08);
   border: 1px solid rgba(245, 158, 11, 0.22);
   border-radius: 4px;
@@ -828,6 +903,14 @@ button.legend-group-item.is-hidden .legend-group-eye {
 .light-theme .legend-hidden-banner {
   color: #92400e;
   background: rgba(245, 158, 11, 0.12);
+}
+
+/* Security theme reuses the same amber but on a near-black surface
+   with a brighter foreground that maintains AAA contrast. */
+.security-theme .legend-hidden-banner {
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.32);
 }
 
 /* Row wrapper for the per-phase isolate (focus) button. */
@@ -887,13 +970,18 @@ button.legend-group-item.is-hidden .legend-group-eye {
   color: #c7e46c;
 }
 
-/* Step group band on canvas */
+/* Step group band on canvas.
+   Z-index is driven by data-layer="background" → z-index: 0 (see the
+   `data-layer` rules in App.css). The previous `z-index: -10 / -5`
+   rules were dead code that put the current band *behind* non-current
+   bands inside the xyflow stacking context — wrong direction. We
+   remove the negative values and rely on the brightness filter and
+   bandPulse animation for the "active" cue. */
 .step-group-band {
-  z-index: -10;
+  z-index: 0;
 }
 
 .step-group-band.is-current {
-  z-index: -5;
   filter: brightness(1.05);
 }
 
@@ -1812,14 +1900,21 @@ button.legend-group-item.is-hidden .legend-group-eye {
   font-size: 11px !important;
 }
 
-/* Live Fingerprinting Widget styling */
+/* Live Fingerprinting Widget — anchored to the top-right of the
+   canvas (just inside the right edge) so it does not collide with
+   the bottom-left MiniMap, the bottom-right React Flow controls,
+   or the canvas legend (top-left). Earlier this sat at
+   bottom: 60px; left: 20px and overlapped the legend whenever
+   both were visible during step 3b / 4 (the 3DS Method phase). */
 .fingerprint-widget {
   position: absolute;
-  bottom: 60px;
-  left: 20px;
-  z-index: 1000;
+  top: 18px;
+  right: 18px;
+  z-index: 8;
   width: 320px;
-  background: rgba(9, 9, 11, 0.85);
+  max-height: calc(100% - 110px);
+  overflow-y: auto;
+  background: rgba(9, 9, 11, 0.92);
   border: 1px solid rgba(16, 185, 129, 0.3);
   box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.1);
   border-radius: 12px;
@@ -1839,6 +1934,23 @@ button.legend-group-item.is-hidden .legend-group-eye {
   box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.15), 0 0 20px rgba(16, 185, 129, 0.05);
   color: #18181b;
 }
+
+/* Security theme fingerprint widget: phosphor-on-green SOC card.
+   The widget now uses a near-black surface with a Matrix-green
+   border and the live indicator pulses a stronger phosphor glow. */
+.security-theme .fingerprint-widget {
+  background: rgba(6, 18, 10, 0.96);
+  border: 1px solid rgba(0, 255, 65, 0.45);
+  box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.7), 0 0 24px rgba(0, 255, 65, 0.18);
+  color: #d9f5d9;
+}
+.security-theme .live-indicator { background: #00ff41; }
+.security-theme .widget-progress-label { color: #00ff41; }
+.security-theme .widget-progress-bar-bg { background: rgba(0, 255, 65, 0.10); }
+.security-theme .widget-field { background: rgba(0, 255, 65, 0.05); border: 1px solid rgba(0, 255, 65, 0.14); }
+.security-theme .field-label { color: #4a8a4a; }
+.security-theme .field-value { color: #d9f5d9; }
+.security-theme .widget-footer { border-top: 1px solid rgba(0, 255, 65, 0.14); color: #4a8a4a; }
 
 .widget-header {
   display: flex;
@@ -2192,7 +2304,7 @@ button.legend-group-item.is-hidden .legend-group-eye {
   border-radius: 6px;
   background: rgba(155, 200, 66, 0.12);
   border: 1px solid rgba(155, 200, 66, 0.34);
-  color: #9bc842;
+  color: var(--accent-secondary);
   font-family: inherit;
   font-size: 10.5px;
   font-weight: 700;

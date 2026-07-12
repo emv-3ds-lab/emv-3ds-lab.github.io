@@ -37,6 +37,13 @@ export const ParticipantHeaderNode: React.FC<{ data: { name: string; fullName: s
     <div
       className={`participant-header-node ${data.isActive ? 'is-active' : ''}`}
       data-clickable
+      data-testid={`participant-${data.id}`}
+      data-active={data.isActive ? 'true' : 'false'}
+      data-layer="rail"
+      data-participant={data.id}
+      role="button"
+      tabIndex={0}
+      aria-label={`${data.name} (${data.fullName})${data.isActive ? ' — active in current step' : ''}`}
       title={`Click to view ${data.fullName} profile`}
       style={{
         border: `1px solid ${data.isActive ? data.stroke : 'var(--border-color)'}`,
@@ -55,12 +62,13 @@ export const ParticipantHeaderNode: React.FC<{ data: { name: string; fullName: s
         width: '160px',
         textAlign: 'center',
         transition: 'all 0.2s ease',
+        cursor: 'pointer',
       }}
     >
-      <div 
-        style={{ 
-          background: 'var(--bg-tertiary)', 
-          padding: '6px', 
+      <div
+        style={{
+          background: 'var(--bg-tertiary)',
+          padding: '6px',
           borderRadius: '6px',
           marginBottom: '6px',
           border: '1px solid var(--border-color)',
@@ -70,7 +78,7 @@ export const ParticipantHeaderNode: React.FC<{ data: { name: string; fullName: s
       </div>
       <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>{data.name}</div>
       <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: '500' }}>{data.fullName}</div>
-      
+
       {/* Handle for the lifeline edge stretching downwards */}
       <Handle type="source" position={Position.Bottom} id="lifeline-start" style={{ opacity: 0 }} />
     </div>
@@ -85,8 +93,11 @@ export const LifelineAnchorNode: React.FC<{
   } 
 }> = React.memo(({ data }) => {
   return (
-    <div 
+    <div
       className={`lifeline-anchor-node ${data.isHighlighted ? 'highlighted' : ''}`}
+      data-layer="rail"
+      data-anchor="message"
+      data-highlighted={data.isHighlighted || undefined}
       style={{
         width: '10px',
         height: '36px',
@@ -101,19 +112,23 @@ export const LifelineAnchorNode: React.FC<{
         opacity: data.isActive ? 1 : 0.25,
       }}
     >
-      {/* Left handle for incoming/outgoing horizontal connections */}
-      <Handle 
-        type="target" 
-        position={Position.Left} 
-        id="left" 
-        style={{ background: 'transparent', border: 'none', width: '1px', height: '1px' }} 
+      {/* Handles for incoming/outgoing horizontal connections.
+          Sized 8x8 (not 1x1) so screen readers and snap targets can
+          hit-test the geometry, but kept visually transparent because
+          the diagram is read-only — see Pillar 2 #1 of the audit. */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        style={{ background: 'transparent', border: 'none', width: '8px', height: '8px', opacity: 0.01 }}
+        aria-label="Incoming connection target"
       />
-      {/* Right handle for incoming/outgoing horizontal connections */}
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        id="right" 
-        style={{ background: 'transparent', border: 'none', width: '1px', height: '1px' }} 
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        style={{ background: 'transparent', border: 'none', width: '8px', height: '8px', opacity: 0.01 }}
+        aria-label="Outgoing connection source"
       />
     </div>
   );
@@ -132,6 +147,8 @@ export const LifelineBottomNode: React.FC<{
   return (
     <div
       className={`lifeline-bottom-cap ${data.isActive ? 'is-active' : ''}`}
+      data-layer="rail"
+      data-anchor="lifeline-bottom"
       style={{
         width: '28px',
         height: '10px',
@@ -147,40 +164,70 @@ export const LifelineBottomNode: React.FC<{
   );
 });
 
-export const InternalStepNode: React.FC<{ 
-  data: { 
-    num: string; 
-    label: string; 
-    isHighlighted: boolean; 
+export const InternalStepNode: React.FC<{
+  data: {
+    num: string;
+    label: string;
+    isHighlighted: boolean;
     isActive: boolean;
     color: string;
     stroke: string;
-  } 
+    isError?: boolean;
+    /**
+     * Optional archetype tag surfaced via `data-archetype` on the DOM.
+     * Defaults to 'internal' for backward compatibility. Used by the
+     * research-lens tooling to scope selectors.
+     */
+    archetype?: 'internal' | 'cache' | 'risk' | 'lookup';
+  }
 }> = React.memo(({ data }) => {
   const getInternalIcon = (label: string) => {
     const l = label.toLowerCase();
     if (l.includes('lookup') || l.includes('cache')) {
-      return <Database size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} />;
+      return <Database size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} aria-hidden="true" />;
     }
     if (l.includes('validate')) {
-      return <Search size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} />;
+      return <Search size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} aria-hidden="true" />;
     }
     if (l.includes('risk') || l.includes('decision')) {
-      return <ShieldCheck size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} />;
+      return <ShieldCheck size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} aria-hidden="true" />;
     }
-    return <RotateCw size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} />;
+    return <RotateCw size={13} style={{ color: data.isActive ? data.stroke : 'var(--text-muted)' }} aria-hidden="true" />;
   };
 
+  // Non-color state: error steps use a dashed border (not just a red hue)
+  // so users with red/green color blindness can still distinguish them.
+  // Width also bumps from 1.5px → 2.25px when highlighted (a second
+  // non-color cue on top of the color change).
+  const isHighlighted = data.isHighlighted;
+  const isError = !!data.isError;
+  const borderStyle = isError
+    ? `1.5px dashed ${data.stroke}`
+    : `${isHighlighted ? 2.25 : 1.5}px solid ${isHighlighted ? data.stroke : data.isActive ? 'var(--border-active)' : 'var(--border-color)'}`;
+
   return (
-    <div 
-      className={`internal-step-node ${data.isHighlighted ? 'highlighted' : ''}`}
+    <div
+      className={`internal-step-node ${isHighlighted ? 'highlighted' : ''} ${isError ? 'error' : ''}`}
+      data-testid={`internal-step-${data.num}`}
+      data-step-state={isError ? 'error' : isHighlighted ? 'current' : data.isActive ? 'active' : 'inactive'}
+      data-layer="step"
+      data-archetype={data.archetype ?? 'internal'}
+      // role="button" + tabIndex makes this node focusable by keyboard
+      // navigation (Tab key). The aria-current="step" attribute exposes
+      // the active step to screen readers in the same way the
+      // <StepNumberRailNode> does, so the two are equivalent anchors.
+      role="button"
+      tabIndex={isHighlighted ? 0 : -1}
+      aria-current={isHighlighted ? 'step' : undefined}
+      aria-invalid={isError || undefined}
+      aria-label={`Step ${data.num}: ${data.label}${isError ? ' (error path)' : ''}`}
       style={{
         padding: '8px 12px',
         borderRadius: '6px',
         background: 'var(--bg-secondary)',
-        border: `1px solid ${data.isHighlighted ? data.stroke : data.isActive ? 'var(--border-active)' : 'var(--border-color)'}`,
-        boxShadow: data.isHighlighted 
-          ? `0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 0 0 1px ${data.stroke}20` 
+        border: borderStyle,
+        boxShadow: isHighlighted
+          ? `0 4px 12px -2px rgba(0, 0, 0, 0.12), 0 0 0 1px ${data.stroke}20`
           : 'var(--shadow-sm)',
         color: data.isActive ? 'var(--text-primary)' : 'var(--text-muted)',
         fontSize: '11px',
@@ -190,12 +237,13 @@ export const InternalStepNode: React.FC<{
         gap: '8px',
         transition: 'all 0.2s ease',
         opacity: data.isActive ? 1 : 0.25,
+        cursor: 'pointer',
       }}
     >
-      <div 
-        style={{ 
-          background: 'var(--bg-tertiary)', 
-          padding: '4px', 
+      <div
+        style={{
+          background: 'var(--bg-tertiary)',
+          padding: '4px',
           borderRadius: '4px',
           display: 'flex',
           alignItems: 'center',
@@ -209,11 +257,11 @@ export const InternalStepNode: React.FC<{
         <div style={{ fontWeight: '700', color: data.isActive ? data.stroke : 'var(--text-muted)', fontSize: '10px' }}>
           STEP {data.num}
         </div>
-        <div style={{ 
-          fontWeight: '500', 
-          color: data.isActive ? 'var(--text-primary)' : 'var(--text-muted)', 
-          overflow: 'hidden', 
-          textOverflow: 'ellipsis', 
+        <div style={{
+          fontWeight: '500',
+          color: data.isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           marginTop: '1px'
         }}>
@@ -245,6 +293,8 @@ export const DomainGroupNode: React.FC<{
         position: 'relative',
         opacity: 0.85,
       }}
+      data-layer="background"
+      data-domain="group"
     >
       <div
         style={{
@@ -306,11 +356,36 @@ export const StepGroupBandNode: React.FC<{
     phaseIndex: number;
     /** Number of steps in this phase (for the chip footer). */
     stepCount: number;
+    /**
+     * If set, the badge is rendered on the band's title row showing the
+     * earliest protocol version that this phase applies to. Phases with
+     * introducedIn > activeVersion are filtered out at the store level
+     * so this badge is mostly informational; we still show it because
+     * it helps readers cross-reference the EMVCo spec.
+     */
+    introducedIn?: import('../types').ProtocolVersion;
+    /**
+     * Active protocol version (passed by the App for the version-diff
+     * tier calculation). Optional — if absent, the badge is hidden.
+     */
+    activeVersion?: import('../types').ProtocolVersion;
   };
 }> = React.memo(({ data }) => {
+  // Version tier: same (default), introduced later (amber), or deprecated
+  // (red, reserved for future use).
+  const versionTier: 'same' | 'newer' | 'hidden' = !data.introducedIn
+    ? 'same'
+    : !data.activeVersion
+    ? 'same'
+    : data.introducedIn === data.activeVersion
+    ? 'same'
+    : 'newer';
   return (
     <div
       className={`step-group-band ${data.isCurrent ? 'is-current' : ''}`}
+      data-layer="background"
+      data-domain="phase-band"
+      data-current={data.isCurrent || undefined}
       style={{
         width: `${data.width}px`,
         height: `${data.height}px`,
@@ -372,6 +447,25 @@ export const StepGroupBandNode: React.FC<{
           P{data.phaseIndex.toString().padStart(2, '0')}
         </span>
         {data.title}
+        {data.introducedIn && (
+          <span
+            title={`Introduced in EMV 3DS v${data.introducedIn}`}
+            style={{
+              fontSize: '8.5px',
+              fontWeight: 700,
+              color: versionTier === 'newer' ? '#fb923c' : 'var(--text-muted)',
+              background: versionTier === 'newer' ? 'rgba(251, 146, 60, 0.10)' : 'var(--bg-tertiary)',
+              padding: '0 4px',
+              borderRadius: '3px',
+              border: `1px solid ${versionTier === 'newer' ? 'rgba(251, 146, 60, 0.35)' : 'var(--border-color)'}`,
+              marginLeft: '2px',
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            }}
+            aria-label={`Introduced in protocol version ${data.introducedIn}`}
+          >
+            ≥ v{data.introducedIn}
+          </span>
+        )}
         <span
           style={{
             fontSize: '8.5px',
@@ -417,6 +511,13 @@ export const StepNumberRailNode: React.FC<{
       className={`step-number-rail ${data.isCurrent ? 'is-current' : ''} ${
         data.isActive ? 'is-active' : 'is-inactive'
       }`}
+      data-testid={`rail-${data.num}`}
+      data-step-state={data.isCurrent ? 'current' : data.isActive ? 'active' : 'inactive'}
+      data-layer="rail"
+      role={data.isCurrent ? 'button' : undefined}
+      tabIndex={data.isCurrent ? 0 : -1}
+      aria-current={data.isCurrent ? 'step' : undefined}
+      aria-label={data.isCurrent ? `Step ${data.num}: ${data.label} (current)` : undefined}
       style={{
         display: 'inline-flex',
         flexDirection: 'column',
@@ -461,6 +562,7 @@ export const StepNumberRailNode: React.FC<{
             boxShadow: data.isCurrent ? `0 0 6px ${data.color}` : 'none',
             flexShrink: 0,
           }}
+          aria-hidden="true"
         />
         {data.num}
       </div>
@@ -530,6 +632,9 @@ export const SwimlaneColumnNode: React.FC<{
   return (
     <div
       className={`swimlane-column-node ${data.isActive ? 'is-active' : ''}`}
+      data-layer="background"
+      data-domain="swimlane"
+      data-active={data.isActive || undefined}
       style={{
         width: `${data.width}px`,
         height: `${data.height}px`,

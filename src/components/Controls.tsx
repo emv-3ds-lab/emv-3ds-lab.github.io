@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { 
   Play, 
   Pause, 
@@ -49,7 +49,7 @@ interface ControlsProps {
   activeSteps: FlowStep[];
 }
 
-export const Controls: React.FC<ControlsProps> = ({
+export const Controls: React.FC<ControlsProps> = memo(({
   scenario,
   setScenario,
   currentStepIndex,
@@ -237,7 +237,7 @@ export const Controls: React.FC<ControlsProps> = ({
           className={`sidebar-tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
         >
           <Compass size={14} />
-          <span>Interactive Timeline</span>
+          <span>Protocol Walkthrough</span>
         </button>
         <button
           onClick={() => setActiveTab('config')}
@@ -334,7 +334,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <div className="control-group timeline-group" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '14px' }}>
             <h3 className="group-title" style={{ paddingBottom: '8px', marginBottom: '4px' }}>
               <Compass size={14} className="title-icon" />
-              Interactive Timeline Checklist
+              Protocol Walkthrough
             </h3>
             <div className="timeline-container" style={{ flex: 1, overflowY: 'auto' }}>
               {activeSteps.map((step, idx) => {
@@ -358,6 +358,7 @@ export const Controls: React.FC<ControlsProps> = ({
                     }}
                     className={`timeline-step ${statusClass}`}
                     style={{ position: 'relative', padding: '6px 10px', minHeight: '32px' }}
+                    aria-current={isCurrent ? 'step' : undefined}
                   >
                     <span 
                       className={`timeline-dot ${statusClass}`}
@@ -423,70 +424,97 @@ export const Controls: React.FC<ControlsProps> = ({
             </h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', fontSize: '10px', fontWeight: 700 }}>
               {(() => {
-                const pills: Array<{ label: string; tone: 'neutral' | 'success' | 'warn' | 'danger' | 'info' | 'accent' }> = [];
+                // goToStepByNum finds the first active step whose `num` starts
+                // with the supplied step-number prefix (e.g. "11a" matches
+                // "11a", "11a/x"). Used by the clickable flow-path pills to
+                // jump directly to that step in the canvas.
+                const goToStepByNum = (numPrefix: string) => {
+                  const idx = activeSteps.findIndex((s) => s.num === numPrefix || s.num.startsWith(numPrefix + '/') || s.num.startsWith(numPrefix + '_'));
+                  if (idx >= 0) {
+                    setIsPlaying(false);
+                    setCurrentStepIndex(idx);
+                  }
+                };
+                const pills: Array<{ label: string; tone: 'neutral' | 'success' | 'warn' | 'danger' | 'info' | 'accent'; stepPrefix?: string }> = [];
                 // Phase 1: 3DS Method
-                pills.push({ label: scenario.methodPath === 'reused' ? 'Method 3a' : scenario.methodPath === 'executed' ? 'Method 3b-4' : scenario.methodPath === 'unavailable' ? 'Method NX' : 'Method TO', tone: scenario.methodPath === 'timeout' ? 'warn' : 'neutral' });
+                pills.push({ label: scenario.methodPath === 'reused' ? 'Method 3a' : scenario.methodPath === 'executed' ? 'Method 3b-4' : scenario.methodPath === 'unavailable' ? 'Method NX' : 'Method TO', tone: scenario.methodPath === 'timeout' ? 'warn' : 'neutral', stepPrefix: '3' });
                 // Phase 2: AReq/ARes
-                pills.push({ label: 'AReq', tone: 'neutral' });
-                pills.push({ label: 'ARes', tone: 'neutral' });
+                pills.push({ label: 'AReq', tone: 'neutral', stepPrefix: '6' });
+                pills.push({ label: 'ARes', tone: 'neutral', stepPrefix: '8' });
                 // Phase 3: 3DS Server decision
                 pills.push({ label: 'S', tone: 'neutral' });
                 // Phase 4: transStatus branch
                 switch (scenario.transStatus) {
-                  case 'Y': pills.push({ label: 'Y', tone: 'success' }); pills.push({ label: '22a Auth', tone: 'success' }); break;
-                  case 'A': pills.push({ label: 'A', tone: 'success' }); pills.push({ label: '22a Auth', tone: 'success' }); break;
-                  case 'N': pills.push({ label: 'N', tone: 'danger' }); pills.push({ label: '22b Decline', tone: 'danger' }); break;
-                  case 'U': pills.push({ label: 'U', tone: 'warn' }); pills.push({ label: '22b Decline', tone: 'danger' }); break;
-                  case 'R': pills.push({ label: 'R', tone: 'danger' }); pills.push({ label: '22b Decline', tone: 'danger' }); break;
-                  case 'D': pills.push({ label: 'D', tone: 'info' }); pills.push({ label: '16e RReq', tone: 'info' }); pills.push({ label: '17-20', tone: 'info' }); pills.push({ label: '22d Wait', tone: 'info' }); break;
+                  case 'Y': pills.push({ label: 'Y', tone: 'success' }); pills.push({ label: '22a Auth', tone: 'success', stepPrefix: '22a' }); break;
+                  case 'A': pills.push({ label: 'A', tone: 'success' }); pills.push({ label: '22a Auth', tone: 'success', stepPrefix: '22a' }); break;
+                  case 'N': pills.push({ label: 'N', tone: 'danger' }); pills.push({ label: '22b Decline', tone: 'danger', stepPrefix: '22b' }); break;
+                  case 'U': pills.push({ label: 'U', tone: 'warn' }); pills.push({ label: '22b Decline', tone: 'danger', stepPrefix: '22b' }); break;
+                  case 'R': pills.push({ label: 'R', tone: 'danger' }); pills.push({ label: '22b Decline', tone: 'danger', stepPrefix: '22b' }); break;
+                  case 'D': pills.push({ label: 'D', tone: 'info' }); pills.push({ label: '16e RReq', tone: 'info', stepPrefix: '16e' }); pills.push({ label: '17-20', tone: 'info', stepPrefix: '17' }); pills.push({ label: '22d Wait', tone: 'info', stepPrefix: '22d' }); break;
                   case 'C':
                     if (scenario.challengeOutcome === 'optout') {
                       pills.push({ label: 'C', tone: 'accent' });
-                      pills.push({ label: '10e Opt-Out', tone: 'warn' });
-                      pills.push({ label: '16f RReq', tone: 'warn' });
-                      pills.push({ label: '17-20', tone: 'warn' });
-                      pills.push({ label: '22e Non-3DS', tone: 'warn' });
+                      pills.push({ label: '10e Opt-Out', tone: 'warn', stepPrefix: '10e' });
+                      pills.push({ label: '16f RReq', tone: 'warn', stepPrefix: '16f' });
+                      pills.push({ label: '17-20', tone: 'warn', stepPrefix: '17' });
+                      pills.push({ label: '22e Non-3DS', tone: 'warn', stepPrefix: '22e' });
                     } else if (scenario.challengeOutcome === 'error') {
                       pills.push({ label: 'C', tone: 'accent' });
-                      pills.push({ label: '11a CReq', tone: 'accent' });
-                      pills.push({ label: '12 Challenge', tone: 'accent' });
-                      pills.push({ label: '21_err', tone: 'danger' });
-                      pills.push({ label: '22b Decline', tone: 'danger' });
+                      pills.push({ label: '11a CReq', tone: 'accent', stepPrefix: '11a' });
+                      pills.push({ label: '12 Challenge', tone: 'accent', stepPrefix: '12' });
+                      pills.push({ label: '21_err', tone: 'danger', stepPrefix: '21_err' });
+                      pills.push({ label: '22b Decline', tone: 'danger', stepPrefix: '22b' });
                     } else if (scenario.challengeOutcome === 'invalid_cres') {
                       pills.push({ label: 'C', tone: 'accent' });
-                      pills.push({ label: '11a CReq', tone: 'accent' });
-                      pills.push({ label: '12 Challenge', tone: 'accent' });
-                      pills.push({ label: '21_close', tone: 'warn' });
-                      pills.push({ label: '22 Invalid', tone: 'warn' });
+                      pills.push({ label: '11a CReq', tone: 'accent', stepPrefix: '11a' });
+                      pills.push({ label: '12 Challenge', tone: 'accent', stepPrefix: '12' });
+                      pills.push({ label: '21_close', tone: 'warn', stepPrefix: '21' });
+                      pills.push({ label: '22 Invalid', tone: 'warn', stepPrefix: '22' });
                     } else if (scenario.challengeOutcome === 'decoupled') {
                       pills.push({ label: 'C', tone: 'accent' });
-                      pills.push({ label: '11a CReq', tone: 'accent' });
-                      pills.push({ label: scenario.challengePresentation === 'oob' ? '12b OOB' : '12 Challenge', tone: 'accent' });
-                      pills.push({ label: '16d RReq', tone: 'info' });
-                      pills.push({ label: '17-20', tone: 'info' });
-                      pills.push({ label: '22c Pending', tone: 'info' });
+                      pills.push({ label: '11a CReq', tone: 'accent', stepPrefix: '11a' });
+                      pills.push({ label: scenario.challengePresentation === 'oob' ? '12b OOB' : '12 Challenge', tone: 'accent', stepPrefix: '12' });
+                      pills.push({ label: '16d RReq', tone: 'info', stepPrefix: '16d' });
+                      pills.push({ label: '17-20', tone: 'info', stepPrefix: '17' });
+                      pills.push({ label: '22c Pending', tone: 'info', stepPrefix: '22c' });
                     } else {
                       // success / failure / cancelled
                       pills.push({ label: 'C', tone: 'accent' });
-                      pills.push({ label: '11a CReq', tone: 'accent' });
-                      pills.push({ label: scenario.challengePresentation === 'oob' ? '12b-14b OOB' : '12-14', tone: 'accent' });
-                      if (scenario.repeatChallenge) pills.push({ label: '15b Retry', tone: 'warn' });
-                      pills.push({ label: '15', tone: 'accent' });
-                      pills.push({ label: '16a/b RReq', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger' });
-                      pills.push({ label: '17-20', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger' });
-                      pills.push({ label: '21_close', tone: 'neutral' });
-                      pills.push({ label: scenario.challengeOutcome === 'success' ? '22a' : '22b', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger' });
+                      pills.push({ label: '11a CReq', tone: 'accent', stepPrefix: '11a' });
+                      pills.push({ label: scenario.challengePresentation === 'oob' ? '12b-14b OOB' : '12-14', tone: 'accent', stepPrefix: '12' });
+                      if (scenario.repeatChallenge) pills.push({ label: '15b Retry', tone: 'warn', stepPrefix: '15b' });
+                      pills.push({ label: '15', tone: 'accent', stepPrefix: '15' });
+                      pills.push({ label: '16a/b RReq', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger', stepPrefix: '16' });
+                      pills.push({ label: '17-20', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger', stepPrefix: '17' });
+                      pills.push({ label: '21_close', tone: 'neutral', stepPrefix: '21' });
+                      pills.push({ label: scenario.challengeOutcome === 'success' ? '22a' : '22b', tone: scenario.challengeOutcome === 'success' ? 'success' : 'danger', stepPrefix: scenario.challengeOutcome === 'success' ? '22a' : '22b' });
                     }
                     break;
-                  case 'I': pills.push({ label: 'I', tone: 'info' }); pills.push({ label: '22f Non-3DS', tone: 'info' }); break;
-                  case 'S': pills.push({ label: 'S', tone: 'accent' }); pills.push({ label: 'WebAuthn', tone: 'success' }); pills.push({ label: '22g SPC', tone: 'success' }); break;
+                  case 'I': pills.push({ label: 'I', tone: 'info' }); pills.push({ label: '22f Non-3DS', tone: 'info', stepPrefix: '22f' }); break;
+                  case 'S': pills.push({ label: 'S', tone: 'accent' }); pills.push({ label: 'WebAuthn', tone: 'success' }); pills.push({ label: '22g SPC', tone: 'success', stepPrefix: '22g' }); break;
                 }
-                return pills.map((p, idx) => (
-                  <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-                    <span className={`path-pill path-pill-${p.tone}`}>{p.label}</span>
-                    {idx < pills.length - 1 && <ArrowRight size={10} style={{ color: 'var(--text-muted)' }} />}
-                  </span>
-                ));
+                return pills.map((p, idx) => {
+                  const interactive = Boolean(p.stepPrefix);
+                  const click = interactive ? () => goToStepByNum(p.stepPrefix!) : undefined;
+                  return (
+                    <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+                      {interactive ? (
+                        <button
+                          type="button"
+                          onClick={click}
+                          className={`path-pill path-pill-${p.tone} path-pill-clickable`}
+                          title={`Jump to step ${p.stepPrefix}`}
+                          aria-label={`Jump to step ${p.stepPrefix}: ${p.label}`}
+                        >
+                          {p.label}
+                        </button>
+                      ) : (
+                        <span className={`path-pill path-pill-${p.tone}`}>{p.label}</span>
+                      )}
+                      {idx < pills.length - 1 && <ArrowRight size={10} style={{ color: 'var(--text-muted)' }} aria-hidden="true" />}
+                    </span>
+                  );
+                });
               })()}
             </div>
             <div style={{ fontSize: '9.5px', color: 'var(--text-muted)', lineHeight: 1.4, marginTop: '2px' }}>
@@ -843,4 +871,5 @@ export const Controls: React.FC<ControlsProps> = ({
       )}
     </div>
   );
-};
+});
+Controls.displayName = 'Controls';

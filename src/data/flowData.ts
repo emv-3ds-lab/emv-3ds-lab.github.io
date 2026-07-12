@@ -63,6 +63,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'Out-of-band cache warm-up. Not part of the per-transaction flow — runs at most every 12 hours (full) or every hour (partial).',
     color: '#64748b', // slate
     icon: 'cache',
+    introducedIn: '2.1.0',
   },
   {
     id: 'setup',
@@ -70,6 +71,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: '3DS Server resolves which ACS/DS protocol versions to use and whether a 3DS Method URL is available for the card range.',
     color: '#0ea5e9', // sky
     icon: 'setup',
+    introducedIn: '2.1.0',
   },
   {
     id: 'method',
@@ -77,6 +79,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'A hidden iframe lets the ACS gather Browser/device fingerprint data, correlated to the same 3DS Server Transaction ID used later in AReq. The user sees nothing on screen.',
     color: '#f59e0b', // amber (warning: hidden complexity)
     icon: 'fingerprint',
+    introducedIn: '2.1.0',
   },
   {
     id: 'areq',
@@ -84,6 +87,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'The 3DS Server assembles the AReq from the requestor-collected and browser-collected data and posts it to the DS over a server-authenticated TLS link.',
     color: '#6366f1', // indigo
     icon: 'request',
+    introducedIn: '2.1.0',
   },
   {
     id: 'ds_validation',
@@ -91,6 +95,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'The Directory Server validates the AReq, generates a DS Transaction ID, and either forwards to the ACS or returns an error.',
     color: '#8b5cf6', // purple
     icon: 'route',
+    introducedIn: '2.1.0',
   },
   {
     id: 'acs_decision',
@@ -98,6 +103,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'The ACS uses the AReq data, prior 3DS Method data, and risk signals to decide: authenticate without challenge (Y/A), challenge, decoupled auth, or reject. Frictionless ends here.',
     color: '#10b981', // emerald
     icon: 'shield',
+    introducedIn: '2.1.0',
   },
   {
     id: 'ares',
@@ -105,6 +111,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'The ARes is validated and forwarded back through the DS to the 3DS Server, which either finishes frictionless processing or starts the browser challenge path.',
     color: '#06b6d4', // cyan
     icon: 'response',
+    introducedIn: '2.1.0',
   },
   {
     id: 'challenge',
@@ -112,6 +119,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'For `transStatus = C`, the 3DS Server posts a CReq through the browser, the ACS renders the challenge UI, and the cardholder submits the requested authentication data.',
     color: '#ef4444', // red
     icon: 'challenge',
+    introducedIn: '2.1.0',
   },
   {
     id: 'results',
@@ -119,6 +127,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: 'After challenge completion, the ACS sends the final result via RReq/RRes and then posts the final CRes to the merchant notification URL.',
     color: '#14b8a6', // teal
     icon: 'result',
+    introducedIn: '2.1.0',
   },
   {
     id: 'completion',
@@ -126,6 +135,7 @@ export const STEP_GROUPS: StepGroupMeta[] = [
     description: '3DS processing ends. The 3DS Requestor Environment continues the checkout and, for success, includes the ECI and CAVV in the standard authorization message.',
     color: '#84cc16', // lime
     icon: 'check',
+    introducedIn: '2.1.0',
   },
 ];
 

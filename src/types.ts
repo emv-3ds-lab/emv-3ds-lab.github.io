@@ -8,6 +8,50 @@ export type ChallengePreference = '01' | '02' | '03' | '04';
 export type ChallengeMandated = 'Y' | 'N';
 export type ChallengePresentation = 'html' | 'oob';
 
+/**
+ * Step archetype drives the visual shape of a node on the canvas. Without
+ * an explicit archetype, the canvas falls back to substring matching on
+ * the step label, which silently breaks when a label is renamed (e.g.
+ * "Risk lookup" → "Decisioning"). With an explicit archetype, the shape
+ * is stable regardless of copy changes.
+ *
+ *  - `message`   A directed message between two participants (AReq, ARes…)
+ *  - `internal`  Internal processing on a single participant (decisioning)
+ *  - `preauth`   PReq / PRes cache warm-up (out-of-band, silent)
+ *  - `error`     An error / invalid step on the error path
+ *  - `system`    A system-level note or event (e.g. SPC, oob)
+ *  - `browser`   A browser-side user action (challenge presented, OTP entry)
+ *  - `acs`       Issuer-side decision / orchestration (ACS risk, decoupled)
+ *  - `ds`        Directory Server routing / validation
+ */
+export type StepArchetype =
+  | 'message'
+  | 'internal'
+  | 'preauth'
+  | 'error'
+  | 'system'
+  | 'browser'
+  | 'acs'
+  | 'ds';
+
+/**
+ * The 8 canonical node states on the canvas. Each state is a single prop
+ * and a single data attribute (`data-step-state`), so styling is driven
+ * entirely from CSS attribute selectors. This gives us:
+ *   - non-color cues (dashed border = error, 2.25px = active, checkmark = success)
+ *   - test hooks (`data-step-state="error"` is greppable in E2E)
+ *   - A11y semantics (`aria-invalid`, `aria-current="step"`)
+ */
+export type StepState =
+  | 'default'      // Not yet executed, not the current step
+  | 'active'       // Has been executed in the current scenario (idx < currentStepIndex)
+  | 'current'      // The current step (idx == currentStepIndex)
+  | 'executed'     // Synonym of 'active' — used on edges after the step has been processed
+  | 'selected'     // The user has clicked/selected this step
+  | 'hover'        // Mouse hover (CSS-only state)
+  | 'disabled'     // Read-only / locked
+  | 'error';       // Error or invalid path
+
 export interface Scenario {
   protocolVersion: ProtocolVersion;
   methodPath: MethodPath;
@@ -66,6 +110,11 @@ export interface StepGroupMeta {
   description: string;
   color: string;            // band color
   icon: 'cache' | 'setup' | 'fingerprint' | 'request' | 'route' | 'shield' | 'response' | 'challenge' | 'result' | 'check';
+  /**
+   * Earliest protocolVersion this phase applies to. If the active scenario
+   * is older, the phase is hidden from the canvas. Default: '2.1.0'.
+   */
+  introducedIn?: ProtocolVersion;
 }
 
 export interface FlowStep {
@@ -89,6 +138,18 @@ export interface FlowStep {
   payload?: any; // Mock JSON or object payload
   payloadTitle?: string;
   payloadType?: 'json' | 'form' | 'info';
+  /**
+   * Step archetype drives the visual shape on the canvas. Optional for
+   * backward-compat: when missing, we fall back to substring matching on
+   * the label inside InternalStepNode.
+   */
+  archetype?: StepArchetype;
+  /**
+   * Whether this step belongs to the error / invalid path of the
+   * protocol. When true, the node is rendered with a dashed border
+   * and a `--color-danger` tint regardless of color-mode.
+   */
+  isErrorPath?: boolean;
   isActive: (scenario: Scenario) => boolean;
 }
 

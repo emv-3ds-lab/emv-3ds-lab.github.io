@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Copy, Check, ExternalLink, Eye, EyeOff, EyeClosed, Clock, Lightbulb, User, Server, Network, Building2, BookOpen, Shield, AlertTriangle, ArrowRight, ArrowLeft, Key, Lock, CheckCircle2, XCircle, FileCode, Layers, Zap, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Copy, Check, ExternalLink, Eye, EyeOff, EyeClosed, Clock, Lightbulb, User, Server, Network, Building2, BookOpen, Shield, AlertTriangle, ArrowRight, ArrowLeft, Key, Lock, CheckCircle2, XCircle, FileCode, Layers, Zap, MapPin, Terminal, ClipboardPaste, FileWarning, ChevronDown, ChevronUp } from 'lucide-react';
 import type { FlowStep, Scenario, UserVisibility, StepGroupMeta, StepGroupId, ParticipantId, SecurityLensNote } from '../types';
 import { PARTICIPANTS, FLOW_STEPS, STEP_GROUPS, DOMAIN_OVERVIEWS, PARTICIPANT_OVERVIEWS, STEP_GROUP_OVERVIEWS, GLOSSARY, SECURITY_LENS_BY_STEP } from '../data/flowData';
 import { JsonHighlighter } from './JsonHighlighter';
+import { validate3dsMessage, toCurl, decodeJws } from '../utils/jwsValidator';
+import type { ValidationIssue, Severity } from '../utils/jwsValidator';
 
 export type DetailsContext =
   | { kind: 'step'; stepId: string }
@@ -75,6 +77,16 @@ const RISK_META: Record<NonNullable<SecurityLensNote['riskLevel']>, { label: str
   low: { label: 'Low', color: '#d1fae5', bg: 'rgba(16, 185, 129, 0.18)' },
 };
 
+// Color tokens for the JWS/AReq/ARes validator issues. Aligned to the
+// same severity palette as RISK_META so the visual language is consistent.
+const SEVERITY_COLOR: Record<Severity, { accent: string; bg: string; border: string }> = {
+  critical: { accent: '#ef4444', bg: 'rgba(239, 68, 68, 0.10)', border: 'rgba(239, 68, 68, 0.30)' },
+  high:     { accent: '#f59e0b', bg: 'rgba(245, 158, 11, 0.10)', border: 'rgba(245, 158, 11, 0.30)' },
+  medium:   { accent: '#3b82f6', bg: 'rgba(59, 130, 246, 0.10)', border: 'rgba(59, 130, 246, 0.30)' },
+  low:      { accent: '#10b981', bg: 'rgba(16, 185, 129, 0.10)', border: 'rgba(16, 185, 129, 0.30)' },
+  info:     { accent: '#94a3b8', bg: 'rgba(148, 163, 184, 0.08)', border: 'rgba(148, 163, 184, 0.25)' },
+};
+
 const HIGH_RISK_STEPS = new Set([
   'step_10e', 'step_11a', 'step_11b', 'step_16e', 'step_16f', 'step_17',
   'step_21a', 'step_21b', 'step_21c', 'step_22e'
@@ -112,15 +124,26 @@ const extractPayloadFields = (payload: unknown): string[] => {
   return Array.from(fields);
 };
 
-export const DetailsPanel: React.FC<DetailsPanelProps> = ({ step, scenario, context, securityLensEnabled, onShowStep, onShowGroup, onShowParticipant, onShowDomain, onShowGlossary }) => {
+export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario, context, securityLensEnabled, onShowStep, onShowGroup, onShowParticipant, onShowDomain, onShowGlossary }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'payload' | 'security'>('overview');
   const [copied, setCopied] = useState(false);
   const [copiedSecurity, setCopiedSecurity] = useState(false);
+  const [copiedCurl, setCopiedCurl] = useState(false);
+  const [pastedPayload, setPastedPayload] = useState('');
+  const [validationOpen, setValidationOpen] = useState(true);
+  const [validationIssues, setValidationIssues] = useState<ValidationIssue[]>([]);
 
   useEffect(() => {
     setActiveTab('overview');
     setCopied(false);
     setCopiedSecurity(false);
+    setCopiedCurl(false);
+    // Reset the paste buffer when navigating to a different step — keeping
+    // it across step changes would mislead the user into thinking the
+    // validation result applies to the newly-shown payload.
+    setPastedPayload('');
+    setValidationIssues([]);
+    setValidationOpen(true);
   }, [context]);
 
   useEffect(() => {
@@ -293,6 +316,46 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ step, scenario, cont
       setTimeout(() => setCopied(false), 2000);
     });
   };
+
+  // === Copy-as-cURL (audit §4.6) ===
+  // Renders the payload as a cURL command — the format an integration
+  // engineer pastes into their sandbox to manually exercise the endpoint.
+  // For the AReq step the endpoint is the 3DS Server; for ARes the URL
+  // is the requestor's notification URL. We default to a labeled placeholder.
+  const handleCopyCurl = () => {
+    const payload = pastedPayload.trim() || (dynamicPayload ? JSON.stringify(dynamicPayload, null, 2) : '');
+    if (!payload) return;
+    // Pick a reasonable endpoint hint per step.
+    let endpoint = 'https://3dss.example/areq';
+    if (step.id.includes('6_b') || step.id.includes('ares')) endpoint = 'https://3dss.example/ares-receiver';
+    else if (step.id.includes('cres')) endpoint = step.payload?.notificationUrl || 'https://merchant.example/3ds-notify';
+    const curl = toCurl(payload, endpoint);
+    navigator.clipboard.writeText(curl).then(() => {
+      setCopiedCurl(true);
+      setTimeout(() => setCopiedCurl(false), 2000);
+    });
+  };
+
+  // === Validate paste (audit §1.1 / §1.5) ===
+  // Runs the JWS/JSON validator against the user's pasted input and renders
+  // a structured issue list. This is the diagnostic tool that closes the
+  // "tracking down a cryptographic signing failure" stall point.
+  const handleValidate = useCallback((value: string) => {
+    setPastedPayload(value);
+    if (!value.trim()) {
+      setValidationIssues([]);
+      return;
+    }
+    setValidationIssues(validate3dsMessage(value));
+  }, []);
+
+  // Decoded JWS preview (if the paste is a JWS compact serialization).
+  const decodedJws = useMemo(() => {
+    if (!pastedPayload.trim()) return null;
+    const parts = pastedPayload.trim().split('.');
+    if (parts.length !== 3) return null;
+    return decodeJws(pastedPayload);
+  }, [pastedPayload]);
 
   const handleCopySecurity = () => {
     if (!enrichedSecurityLensNote) return;
@@ -833,9 +896,14 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ step, scenario, cont
           <div className="tab-pane fade-in payload-pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div className="payload-toolbar">
               <span className="payload-title">{step.payloadTitle || 'Request Payload'}</span>
-              <button onClick={handleCopy} className="copy-btn">
-                {copied ? <><Check size={13} className="copied-icon" /><span>Copied!</span></> : <><Copy size={13} /><span>Copy JSON</span></>}
-              </button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={handleCopyCurl} className="copy-btn" title="Copy this payload as a cURL command — paste into your terminal to exercise the endpoint">
+                  {copiedCurl ? <><Check size={13} className="copied-icon" /><span>Copied!</span></> : <><Terminal size={13} /><span>Copy as cURL</span></>}
+                </button>
+                <button onClick={handleCopy} className="copy-btn">
+                  {copied ? <><Check size={13} className="copied-icon" /><span>Copied!</span></> : <><Copy size={13} /><span>Copy JSON</span></>}
+                </button>
+              </div>
             </div>
 
             {step.payloadType === 'form' ? (
@@ -866,6 +934,250 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ step, scenario, cont
                 <JsonHighlighter data={dynamicPayload} />
               </div>
             )}
+
+            {/* === Paste & validate (audit §1.1 / §1.5) ===
+                 A textarea where an integration engineer can paste a real
+                 AReq/ARes (JWS or JSON) and instantly see structural issues
+                 against the EMVCo Table A.1 / B.1 schema. The validation
+                 result updates on every keystroke (debounced via React's
+                 batching). This is the diagnostic loop that closes the
+                 "where do I track down a cryptographic signing failure"
+                 gap from the audit. */}
+            <div
+              className="paste-validate-box"
+              style={{
+                marginTop: '10px',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                background: 'var(--bg-secondary)',
+              }}
+            >
+              <div
+                className="paste-validate-header"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 10px',
+                  borderBottom: '1px solid var(--border-color)',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                <ClipboardPaste size={11} aria-hidden="true" />
+                <span>Paste a real {step.payload?.messageType || (step.id.includes('ares') ? 'ARes' : 'AReq')} and validate</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+                  JWS compact serialization or raw JSON
+                </span>
+              </div>
+              <textarea
+                value={pastedPayload}
+                onChange={(e) => handleValidate(e.target.value)}
+                placeholder="Paste your AReq or ARes here (JWS or JSON). Validation runs locally — nothing is sent."
+                aria-label="Paste a real 3DS message to validate"
+                spellCheck={false}
+                style={{
+                  width: '100%',
+                  minHeight: '60px',
+                  maxHeight: '120px',
+                  resize: 'vertical',
+                  padding: '8px 10px',
+                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                  fontSize: '10.5px',
+                  background: 'transparent',
+                  color: 'var(--text-primary)',
+                  border: 'none',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              {pastedPayload.trim() && (
+                <div
+                  className="validation-accordion"
+                  role="region"
+                  aria-label="Validation issues"
+                  style={{
+                    borderTop: '1px solid var(--border-color)',
+                    padding: '6px 10px',
+                    background: 'var(--bg-tertiary)',
+                  }}
+                >
+                  <button
+                    onClick={() => setValidationOpen((v) => !v)}
+                    aria-expanded={validationOpen}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      width: '100%',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {validationOpen ? <ChevronUp size={12} aria-hidden="true" /> : <ChevronDown size={12} aria-hidden="true" />}
+                    <span>
+                      Validation Issues
+                      <span
+                        style={{
+                          marginLeft: '6px',
+                          padding: '0 6px',
+                          borderRadius: '10px',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          color: validationIssues.length === 0 ? '#065f46' : '#7c2d12',
+                          background: validationIssues.length === 0 ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+                        }}
+                      >
+                        {validationIssues.length}
+                      </span>
+                    </span>
+                    <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '10px', fontWeight: 500 }}>
+                      {validationIssues.length === 0
+                        ? 'No issues found'
+                        : `${validationIssues.filter((i) => i.severity === 'critical' || i.severity === 'high').length} critical/high`}
+                    </span>
+                  </button>
+
+                  {validationOpen && (
+                    <ul style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {validationIssues.length === 0 && pastedPayload.trim() && (
+                        <li style={{ fontSize: '10.5px', color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle2 size={12} aria-hidden="true" />
+                          <span>No structural issues detected against the EMVCo schema check.</span>
+                        </li>
+                      )}
+                      {validationIssues.map((issue, i) => (
+                        <li
+                          key={i}
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'auto 1fr auto',
+                            gap: '6px',
+                            alignItems: 'flex-start',
+                            padding: '5px 6px',
+                            border: `1px solid ${SEVERITY_COLOR[issue.severity].border}`,
+                            borderLeft: `3px solid ${SEVERITY_COLOR[issue.severity].accent}`,
+                            borderRadius: '4px',
+                            background: SEVERITY_COLOR[issue.severity].bg,
+                          }}
+                        >
+                          <span
+                            title={`Severity: ${issue.severity}`}
+                            style={{
+                              fontSize: '9px',
+                              fontWeight: 800,
+                              color: SEVERITY_COLOR[issue.severity].accent,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.06em',
+                              paddingTop: '1px',
+                            }}
+                          >
+                            {issue.severity}
+                          </span>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-primary)' }}>
+                              <code
+                                style={{
+                                  fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                                  fontSize: '10px',
+                                  background: 'var(--bg-secondary)',
+                                  padding: '0 4px',
+                                  borderRadius: '3px',
+                                  color: 'var(--accent-primary)',
+                                }}
+                              >
+                                {issue.field}
+                              </code>
+                              {' '}— {issue.message}
+                            </div>
+                            {issue.suggestion && (
+                              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Suggestion: {issue.suggestion}
+                              </div>
+                            )}
+                          </div>
+                          <code
+                            title={`Spec reference: ${issue.specRef}`}
+                            style={{
+                              fontSize: '9px',
+                              color: 'var(--text-muted)',
+                              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                              whiteSpace: 'nowrap',
+                              paddingTop: '1px',
+                            }}
+                          >
+                            {issue.specRef}
+                          </code>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {decodedJws && (decodedJws.header || decodedJws.payload) && (
+                    <details
+                      style={{
+                        marginTop: '8px',
+                        borderTop: '1px dashed var(--border-color)',
+                        paddingTop: '6px',
+                      }}
+                    >
+                      <summary
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: 'var(--text-secondary)',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.06em',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Decoded JWS preview
+                      </summary>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '6px' }}>
+                        {decodedJws.header && (
+                          <div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Header</div>
+                            <JsonHighlighter data={decodedJws.header} />
+                          </div>
+                        )}
+                        {decodedJws.payload && (
+                          <div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '2px' }}>Payload</div>
+                            <JsonHighlighter data={decodedJws.payload} />
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              <div
+                className="paste-validate-footer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 10px',
+                  borderTop: '1px solid var(--border-color)',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                  background: 'var(--bg-secondary)',
+                }}
+              >
+                <FileWarning size={11} aria-hidden="true" />
+                <span>Structural validation only — does not verify the JWS signature against an issuer JWK.</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1012,4 +1324,5 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ step, scenario, cont
       </div>
     </div>
   );
-};
+});
+DetailsPanel.displayName = 'DetailsPanel';
