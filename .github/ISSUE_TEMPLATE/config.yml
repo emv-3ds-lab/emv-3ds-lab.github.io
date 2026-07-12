@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security report
-    url: https://github.com/cswasif/3d-diagrams/blob/main/SECURITY.md
+    url: https://github.com/emv-3ds-lab/emv-3ds-lab.github.io/blob/main/SECURITY.md
     about: Please follow the coordinated disclosure guidance in SECURITY.md for vulnerabilities.

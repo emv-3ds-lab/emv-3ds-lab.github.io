@@ -3,7 +3,7 @@
   "description": "A vendor-neutral visual lab for understanding, comparing, and debugging EMV 3-D Secure flows.",
   "private": false,
   "version": "0.0.0",
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "type": "module",
   "keywords": [
     "emv-3ds",

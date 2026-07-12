@@ -318,41 +318,40 @@ Recommended repo stance:
 
 ## License Recommendation
 
-Current state: `AGPL-3.0-only`
+**Current state (revised 2026-07):** `Apache-2.0` for app code, `CC-BY-4.0` for documentation and diagram assets.
 
-That license is philosophically coherent, but it changes who will comfortably adopt, extend, and contribute to the project.
+This is a deliberate shift from the earlier `AGPL-3.0-only` posture. The reasoning is captured below; the practical effect is that any 3DS Server, ACS, or SDK vendor can now embed, fork, or screenshot the lab without legal review, and any researcher can read and modify it under the most common research-software license in the security field.
 
-### Primary recommendation
+### Why Apache 2.0 over AGPL or MPL
 
-If the goal is to become the default community reference, move to:
+- **Patent grant.** Apache 2.0 §3 is an explicit, irrevocable patent licence from each contributor. For a project that touches FIDO, WebAuthn, and EMVCo-encumbered material, that peace of mind is the single most valuable clause in the licence. AGPL and MPL do not offer an equivalent.
+- **Lowest legal-review friction for enterprise contributors.** Apache 2.0 is on every Fortune-500 approved-list. AGPL is on almost none. The cost of a one-week legal review at a large card network is the single largest barrier to a sponsored contribution; Apache 2.0 removes it.
+- **File-level modifications are still free to redistribute.** Apache 2.0 is permissive at the *project* level, but every distributed copy still carries the licence and attribution. The commons guarantee is preserved for the lab as a whole; only the *enclosure* guarantee is given up.
+- **CDN and asset compatibility.** Apache 2.0 is the standard licence for npm, Maven, and most CDNs. No `#AGPL-network-clause` carve-outs required when the lab is embedded in vendor training portals.
+- **Aligns with the lab's real protection.** The "unkillable" property of a research lab comes from the size and engagement of its community, not from the strength of its licence. Apache 2.0 maximises the first; AGPL maximised the second at the cost of the first.
 
-- **app code:** `MPL-2.0`
-- **written docs and diagrams:** `CC-BY-4.0`
+### Why not MPL-2.0 (the previous recommendation)
 
-Why:
+MPL-2.0 is the second-best answer. It preserves file-level reciprocity, which protects the lab from being quietly closed. The trade-off is that it is unfamiliar to most enterprise legal teams, so it adds a review step without solving the patent problem. We chose Apache 2.0 because the patent grant is the harder requirement to work around.
 
-- `MPL-2.0` is materially easier for payment companies and SDK teams to accept than AGPL
-- it still preserves reciprocity at the file level
-- it matches the role of a public reference tool better than a strong network copyleft license
-- it lowers hesitation around embedding, forking, and contribution
+### Why not MIT or BSD
 
-### When to keep AGPL instead
+Permissive without the patent grant. For a project whose subject matter is implicitly entangled with FIDO Alliance and EMVCo patents, an unsigned patent grant is a real risk. Apache 2.0 is permissive *and* signed.
 
-Keep `AGPL-3.0-only` only if the priority is explicitly:
+### Compatibility surface
 
-- anti-enclosure
-- mandatory reciprocity for hosted derivatives
-- public-good governance over maximum adoption
+| Consumer | Compatible under Apache 2.0? |
+|---|---|
+| Embed in a proprietary 3DS Server product | Yes — must reproduce `LICENSE` + `NOTICE` |
+| Fork the lab and ship a private modified version | Yes — same |
+| Use lab screenshots in vendor documentation | Yes |
+| Train a commercial LLM on the lab source | Yes |
+| Re-licence a derivative under a different OSI-approved licence | No (Apache 2.0 §4 requires the derivative to carry the same licence) |
+| Sell a hosted version of the lab as a service | Yes |
 
-That is a valid choice. It is just a different product strategy.
+### When to revisit
 
-### Blunt recommendation
-
-For this specific project, the stronger strategic move is:
-
-**use a permissive-enough research/reference posture rather than a defensive SaaS posture.**
-
-In practice, that means `MPL-2.0` for the app and `CC-BY-4.0` for docs is the cleaner route if "be the default reference" is the real goal.
+If a future contributor wants to add code that is itself AGPL- or GPL-encumbered, the licence will need to be revisited. The current Apache 2.0 choice is contingent on the lab's dependencies staying permissively licensed.
 
 Note: this is a product recommendation, not legal advice.
 
