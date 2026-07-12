@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Shield, Sun, Moon, ChevronLeft, ChevronRight, BookOpen, Eye, EyeOff, Crosshair, Link2, Sparkles } from 'lucide-react';
+import { Shield, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookOpen, Eye, EyeOff, Crosshair, Link2, Sparkles } from 'lucide-react';
 import './App.css';
 
 import type { Scenario, FlowStep, StepGroupId, ParticipantId } from './types';
@@ -88,6 +88,7 @@ type SharedAppState = {
   hiddenGroups?: StepGroupId[];
   theme?: 'dark' | 'light';
   securityLensEnabled?: boolean;
+  scenarioToolbarCollapsed?: boolean;
 };
 
 const SCENARIO_PRESETS: ScenarioPreset[] = [
@@ -191,6 +192,7 @@ function AppContent() {
   // Collapsible Sidebars state
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  const [isScenarioToolbarCollapsed, setIsScenarioToolbarCollapsed] = useState(true);
   const [securityLensEnabled, setSecurityLensEnabled] = useState(false);
 
   // Step Group visibility (Phases) — researchers can hide entire phases
@@ -279,6 +281,10 @@ function AppContent() {
 
         if (typeof parsed.securityLensEnabled === 'boolean') {
           setSecurityLensEnabled(parsed.securityLensEnabled);
+        }
+
+        if (typeof parsed.scenarioToolbarCollapsed === 'boolean') {
+          setIsScenarioToolbarCollapsed(parsed.scenarioToolbarCollapsed);
         }
       }
     } catch {
@@ -377,10 +383,11 @@ function AppContent() {
       hiddenGroups: [...hiddenGroups],
       theme,
       securityLensEnabled,
+      scenarioToolbarCollapsed: isScenarioToolbarCollapsed,
     });
 
     window.history.replaceState({}, '', url);
-  }, [hasLoadedSharedState, scenario, currentStepIndex, hiddenGroups, theme, securityLensEnabled]);
+  }, [hasLoadedSharedState, scenario, currentStepIndex, hiddenGroups, theme, securityLensEnabled, isScenarioToolbarCollapsed]);
 
   useEffect(() => {
     if (!shareCopied) return;
@@ -946,6 +953,7 @@ function AppContent() {
       hiddenGroups: [...hiddenGroups],
       theme,
       securityLensEnabled,
+      scenarioToolbarCollapsed: isScenarioToolbarCollapsed,
     });
 
     window.history.replaceState({}, '', url);
@@ -1028,18 +1036,33 @@ function AppContent() {
         </div>
       </header>
 
-      <section className="scenario-toolbar">
-        <div className="scenario-toolbar-main">
-          <div className="scenario-toolbar-heading">
-            <span className="scenario-toolbar-kicker">
-              <Sparkles size={12} />
-              <span>Scenario Catalog</span>
-            </span>
-            <div className="scenario-toolbar-copy">
-              <strong>{scenarioSummary.title}</strong>
-              <span>{scenarioSummary.description}</span>
-            </div>
+      <section className={`scenario-toolbar ${isScenarioToolbarCollapsed ? 'collapsed' : ''}`}>
+        <div className="scenario-toolbar-row">
+          <button
+            type="button"
+            className="scenario-toolbar-toggle"
+            onClick={() => setIsScenarioToolbarCollapsed((prev) => !prev)}
+            title={isScenarioToolbarCollapsed ? 'Expand scenario catalog' : 'Collapse scenario catalog'}
+            aria-expanded={!isScenarioToolbarCollapsed}
+          >
+            <Sparkles size={12} />
+            <span className="scenario-toolbar-kicker">Scenario</span>
+            {isScenarioToolbarCollapsed ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+          </button>
+          <div className="scenario-toolbar-copy">
+            <strong>{scenarioSummary.title}</strong>
+            {!isScenarioToolbarCollapsed && <span>{scenarioSummary.description}</span>}
           </div>
+          <div className="scenario-facts">
+            {scenarioFacts.map((fact) => (
+              <div key={fact.label} className="scenario-fact-pill">
+                <span className="scenario-fact-label">{fact.label}</span>
+                <span className="scenario-fact-value">{fact.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        {!isScenarioToolbarCollapsed && (
           <div className="scenario-preset-list">
             {SCENARIO_PRESETS.map((preset) => (
               <button
@@ -1054,15 +1077,7 @@ function AppContent() {
               </button>
             ))}
           </div>
-        </div>
-        <div className="scenario-facts">
-          {scenarioFacts.map((fact) => (
-            <div key={fact.label} className="scenario-fact-pill">
-              <span className="scenario-fact-label">{fact.label}</span>
-              <span className="scenario-fact-value">{fact.value}</span>
-            </div>
-          ))}
-        </div>
+        )}
       </section>
 
       {/* Main Dashboard Layout with smooth width transitions */}
