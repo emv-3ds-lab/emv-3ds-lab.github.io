@@ -6,19 +6,18 @@
 and debugging EMV 3-D Secure (3DS) protocol flows across every published
 spec version.**
 
-[![Live Lab](https://img.shields.io/badge/Live-Lab-emv--3ds--lab.github.io-22c55e?style=for-the-badge&logo=githubpages&logoColor=white)](https://emv-3ds-lab.github.io)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue?style=for-the-badge)](./LICENSE)
-[![EMV 3DS](https://img.shields.io/badge/EMV-3DS%20v2.1%20%2F%202.2%20%2F%202.3.1-f97316?style=for-the-badge)](#specification-coverage)
-[![Status: Public Lab](https://img.shields.io/badge/Status-Public%20Lab%20%2F%20alpha-8b5cf6?style=for-the-badge)](#project-status)
-[![Cite: CITATION.cff](https://img.shields.io/badge/Cite-CITATION.cff-0ea5e9?style=for-the-badge)](./CITATION.cff)
-[![Security: CVD](https://img.shields.io/badge/Security-CVD%20%2F%2090--day-ef4444?style=for-the-badge)](./SECURITY.md)
+[Live Lab](https://emv-3ds-lab.github.io) ·
+[CITATION.cff](./CITATION.cff) ·
+[Threat Model](./THREATMODEL.md) ·
+[Security Policy](./SECURITY.md) ·
+[Apache-2.0](./LICENSE)
 
 </div>
 
 <br />
 
 <p align="center">
-  <img src="src/assets/hero.png" alt="EMV 3-D Secure Protocol Lab — the 3-Domain Model visualised across PReq / AReq / CReq / RReq" width="92%" />
+  <img src="src/assets/hero.png" alt="EMV 3-D Secure Protocol Lab — the 3-Domain Model visualised across PReq / AReq / CReq / RReq" width="88%" />
 </p>
 
 <p align="center">
