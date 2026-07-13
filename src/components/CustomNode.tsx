@@ -485,6 +485,80 @@ export const StepGroupBandNode: React.FC<{
   );
 });
 
+export const BranchFrameNode: React.FC<{
+  data: {
+    width: number;
+    height: number;
+    color: string;
+    kind: 'alt' | 'opt' | 'loop' | 'async' | 'par';
+    title: string;
+    detail: string;
+  };
+}> = React.memo(({ data }) => {
+  return (
+    <div
+      className="branch-frame-node"
+      data-layer="background"
+      data-branch-kind={data.kind}
+      style={{
+        width: `${data.width}px`,
+        height: `${data.height}px`,
+        borderRadius: '12px',
+        border: `1.5px dashed ${data.color}55`,
+        background: `linear-gradient(180deg, ${data.color}10 0%, ${data.color}04 100%)`,
+        boxShadow: `inset 0 0 0 1px ${data.color}18`,
+        position: 'relative',
+        pointerEvents: 'none',
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          top: '-12px',
+          left: '14px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '3px 8px',
+          borderRadius: '999px',
+          background: 'var(--bg-secondary)',
+          border: `1px solid ${data.color}45`,
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
+        <span
+          style={{
+            fontSize: '8.5px',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: data.color,
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          }}
+        >
+          {data.kind}
+        </span>
+        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-primary)' }}>{data.title}</span>
+      </div>
+
+      <div
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: '14px',
+          right: '14px',
+          fontSize: '10px',
+          lineHeight: 1.45,
+          color: 'var(--text-muted)',
+          maxWidth: '300px',
+        }}
+      >
+        {data.detail}
+      </div>
+    </div>
+  );
+});
+
 /**
  * StepNumberRailNode renders a small numbered chip on the left margin of
  * the diagram, aligned to a specific step's Y coordinate. Because it lives

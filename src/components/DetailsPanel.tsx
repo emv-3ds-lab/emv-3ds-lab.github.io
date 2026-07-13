@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
-import { Copy, Check, ExternalLink, Eye, EyeOff, EyeClosed, Clock, Lightbulb, User, Server, Network, Building2, BookOpen, Shield, AlertTriangle, ArrowRight, ArrowLeft, Key, Lock, CheckCircle2, XCircle, FileCode, Layers, Zap, MapPin, Terminal, ClipboardPaste, FileWarning, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Check, ExternalLink, Eye, EyeOff, EyeClosed, Clock, Lightbulb, User, Server, Network, Building2, BookOpen, Shield, AlertTriangle, ArrowRight, ArrowLeft, Key, Lock, CheckCircle2, XCircle, FileCode, Layers, Zap, MapPin, Terminal, ClipboardPaste, FileWarning, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react';
 import type { FlowStep, Scenario, UserVisibility, StepGroupMeta, StepGroupId, ParticipantId, SecurityLensNote } from '../types';
-import { PARTICIPANTS, FLOW_STEPS, STEP_GROUPS, DOMAIN_OVERVIEWS, PARTICIPANT_OVERVIEWS, STEP_GROUP_OVERVIEWS, GLOSSARY, SECURITY_LENS_BY_STEP } from '../data/flowData';
+import { PARTICIPANTS, FLOW_STEPS, STEP_GROUPS, DOMAIN_OVERVIEWS, PARTICIPANT_OVERVIEWS, STEP_GROUP_OVERVIEWS, GLOSSARY, SECURITY_LENS_BY_STEP, inferRiskLevelForStep } from '../data/flowData';
 import { JsonHighlighter } from './JsonHighlighter';
 import { validate3dsMessage, toCurl, decodeJws } from '../utils/jwsValidator';
 import type { ValidationIssue, Severity } from '../utils/jwsValidator';
+import { extractPayloadFields, getDynamicPayload } from '../utils/protocolViz';
 
 export type DetailsContext =
   | { kind: 'step'; stepId: string }
@@ -87,42 +88,11 @@ const SEVERITY_COLOR: Record<Severity, { accent: string; bg: string; border: str
   info:     { accent: '#94a3b8', bg: 'rgba(148, 163, 184, 0.08)', border: 'rgba(148, 163, 184, 0.25)' },
 };
 
-const HIGH_RISK_STEPS = new Set([
-  'step_10e', 'step_11a', 'step_11b', 'step_16e', 'step_16f', 'step_17',
-  'step_21a', 'step_21b', 'step_21c', 'step_22e'
-]);
-
-const CRITICAL_RISK_STEPS = new Set(['step_22_invalid']);
-
-const MEDIUM_RISK_STEPS = new Set([
-  'step_3b', 'step_4b', 'step_5', 'step_6a', 'step_7a', 'step_7err1', 'step_8a',
-  'step_10c', 'step_10d', 'step_12', 'step_15b', 'step_21_err', 'step_21_close',
-  'step_22d', 'step_22f', 'step_22g'
-]);
-
 const normalizeSpecHook = (value: string) =>
   value.replace(/Â§/g, '§').replace(/â€¢/g, '•').replace(/â€”/g, '—').replace(/â€“/g, '–');
 
 const uniq = (items: Array<string | undefined>) =>
   Array.from(new Set(items.filter((item): item is string => Boolean(item && item.trim()))));
-
-const extractPayloadFields = (payload: unknown): string[] => {
-  if (!payload || typeof payload !== 'object') return [];
-  const data = payload as Record<string, unknown>;
-  const fields = new Set<string>();
-
-  Object.keys(data).forEach((key) => fields.add(key));
-
-  const nestedCandidates = ['body', 'decodedData', 'fields'];
-  nestedCandidates.forEach((key) => {
-    const value = data[key];
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      Object.keys(value as Record<string, unknown>).forEach((nestedKey) => fields.add(nestedKey));
-    }
-  });
-
-  return Array.from(fields);
-};
 
 export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario, context, securityLensEnabled, onShowStep, onShowGroup, onShowParticipant, onShowDomain, onShowGlossary }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'payload' | 'security'>('overview');
@@ -170,34 +140,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
   const visibilityMeta = VISIBILITY_META[visibility];
   const VisibilityIcon = visibilityMeta.icon;
 
-  const getDynamicPayload = () => {
-    if (!step.payload) return null;
-    const p = JSON.parse(JSON.stringify(step.payload));
-    if (p.transStatus !== undefined) p.transStatus = scenario.transStatus;
-    if (p.body && p.body.transStatus !== undefined) p.body.transStatus = scenario.transStatus;
-    const ind = scenario.methodPath === 'reused' || scenario.methodPath === 'executed' ? 'Y' : scenario.methodPath === 'unavailable' ? 'U' : 'N';
-    if (p.threeDSCompInd !== undefined) p.threeDSCompInd = ind;
-    if (p.body && p.body.threeDSCompInd !== undefined) p.body.threeDSCompInd = ind;
-
-    const challengeResult =
-      scenario.challengeOutcome === 'success'
-        ? 'Y'
-        : scenario.challengeOutcome === 'decoupled'
-          ? 'D'
-          : 'N';
-
-    if (step.id === 'step_17' && p.transStatus !== undefined) p.transStatus = challengeResult;
-    if (step.id === 'step_18' && p.resultsStatus !== undefined) {
-      p.resultsStatus = scenario.challengeOutcome === 'decoupled' ? '04' : '01';
-    }
-    if (step.id === 'step_19' && p.resultsStatus !== undefined) {
-      p.resultsStatus = scenario.challengeOutcome === 'decoupled' ? '04' : '01';
-    }
-
-    return p;
-  };
-
-  const dynamicPayload = getDynamicPayload();
+  const dynamicPayload = getDynamicPayload(step, scenario);
   const effectiveTransStatus = scenario.transStatus === 'C'
     ? (step.groupId === 'results' || step.groupId === 'completion'
       ? (scenario.challengeOutcome === 'success' ? 'Y' : scenario.challengeOutcome === 'decoupled' ? 'D' : 'N')
@@ -236,11 +179,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
     if (!securityLensNote) return null;
 
     const inferredRisk: NonNullable<SecurityLensNote['riskLevel']> =
-      securityLensNote.riskLevel
-      || (CRITICAL_RISK_STEPS.has(step.id) ? 'critical'
-        : HIGH_RISK_STEPS.has(step.id) ? 'high'
-          : MEDIUM_RISK_STEPS.has(step.id) ? 'medium'
-            : 'low');
+      inferRiskLevelForStep(step.id, securityLensNote.riskLevel);
 
     const inferredAttackers = securityLensNote.attackerPositions || uniq([
       step.groupId === 'challenge' || step.groupId === 'method' ? 'Browser / merchant page surface' : undefined,
@@ -328,7 +267,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
     // Pick a reasonable endpoint hint per step.
     let endpoint = 'https://3dss.example/areq';
     if (step.id.includes('6_b') || step.id.includes('ares')) endpoint = 'https://3dss.example/ares-receiver';
-    else if (step.id.includes('cres')) endpoint = step.payload?.notificationUrl || 'https://merchant.example/3ds-notify';
+    else if (step.id.includes('cres')) endpoint = (dynamicPayload?.notificationUrl as string | undefined) || 'https://merchant.example/3ds-notify';
     const curl = toCurl(payload, endpoint);
     navigator.clipboard.writeText(curl).then(() => {
       setCopiedCurl(true);
@@ -894,6 +833,35 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
 
         {isStepContext && activeTab === 'payload' && dynamicPayload && (
           <div className="tab-pane fade-in payload-pane" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Synthetic payload watermark (audit §4.2). Every payload
+                rendered by the lab is fabricated for visualization.
+                Without this chip, a screenshot of the lab could be
+                mistaken for a real capture in a write-up or report. */}
+            <div
+              role="note"
+              aria-label="Synthetic payload notice"
+              data-testid="synthetic-watermark"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 10px',
+                fontSize: '10px',
+                fontWeight: 700,
+                color: '#a78bfa',
+                background: 'rgba(139, 92, 246, 0.10)',
+                borderTop: '1px solid rgba(139, 92, 246, 0.30)',
+                borderBottom: '1px solid rgba(139, 92, 246, 0.30)',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}
+            >
+              <FlaskConical size={11} aria-hidden="true" />
+              <span>Synthetic payload</span>
+              <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
+                All values are fabricated for visualization — no real PAN, BIN, or signature.
+              </span>
+            </div>
             <div className="payload-toolbar">
               <span className="payload-title">{step.payloadTitle || 'Request Payload'}</span>
               <div style={{ display: 'flex', gap: '6px' }}>
@@ -909,7 +877,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
             {step.payloadType === 'form' ? (
               <div className="form-data-display" style={{ overflowY: 'auto' }}>
                 <div style={{ marginBottom: '8px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>
-                  HTTP POST target: <code style={{ color: 'var(--accent-primary)', fontFamily: 'JetBrains Mono' }}>{dynamicPayload.methodUrl || dynamicPayload.notificationUrl}</code>
+                  HTTP POST target: <code style={{ color: 'var(--accent-primary)', fontFamily: 'JetBrains Mono' }}>{String((dynamicPayload.methodUrl || dynamicPayload.notificationUrl) ?? '')}</code>
                 </div>
                 <div className="form-fields-box">
                   {Object.entries(dynamicPayload.fields || {}).map(([key, value]) => (
@@ -919,7 +887,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
                     </div>
                   ))}
                 </div>
-                {dynamicPayload.decodedData && (
+                {dynamicPayload.decodedData != null && (
                   <div className="decoded-json-box">
                     <div className="decoded-header" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <ExternalLink size={12} style={{ color: '#10b981' }} />
@@ -968,7 +936,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = memo(({ step, scenario,
                 }}
               >
                 <ClipboardPaste size={11} aria-hidden="true" />
-                <span>Paste a real {step.payload?.messageType || (step.id.includes('ares') ? 'ARes' : 'AReq')} and validate</span>
+                <span>Paste a real {dynamicPayload?.messageType as string || (step.id.includes('ares') ? 'ARes' : 'AReq')} and validate</span>
                 <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', textTransform: 'none', letterSpacing: 0, fontWeight: 500 }}>
                   JWS compact serialization or raw JSON
                 </span>

@@ -1,10 +1,24 @@
 {
-  "name": "3d-diagrams",
+  "name": "emv-3ds-protocol-lab",
   "description": "A vendor-neutral visual lab for understanding, comparing, and debugging EMV 3-D Secure flows.",
   "private": false,
-  "version": "0.0.0",
+  "version": "0.3.0",
   "license": "Apache-2.0",
+  "author": "Wasif Faisal, BRAC University <md.wasif.faisal@g.bracu.ac.bd>",
   "type": "module",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emv-3ds-lab/emv-3ds-lab.github.io.git"
+  },
+  "homepage": "https://emv-3ds-lab.github.io",
+  "bugs": {
+    "url": "https://github.com/emv-3ds-lab/emv-3ds-lab.github.io/issues"
+  },
   "keywords": [
     "emv-3ds",
     "3d-secure",
@@ -14,9 +28,11 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/prerender.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@xyflow/react": "^12.11.2",
@@ -30,8 +46,10 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "happy-dom": "^15.11.0",
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^2.1.5"
   }
 }

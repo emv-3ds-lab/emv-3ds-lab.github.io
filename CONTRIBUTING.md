@@ -33,14 +33,14 @@ Please keep these rules in mind:
 ## Development
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 For a production build:
 
 ```bash
-npm run build
+pnpm build
 ```
 
 ## How To Propose Changes
@@ -74,8 +74,9 @@ Include:
 At minimum, contributors should:
 
 1. run a production build
-2. sanity-check the affected scenario branches in the UI
-3. verify that public-facing claims remain anchored to sources
+2. run lint and the Vitest suite
+3. sanity-check the affected scenario branches in the UI
+4. verify that public-facing claims remain anchored to sources
 
 ## Communication
 

@@ -1,4 +1,5 @@
 import { createExternalStore } from './createStore';
+import type { ProtocolVersion, VisualizationMode } from '../types';
 
 export type Theme = 'dark' | 'light' | 'security';
 export type DetailsKind = 'step' | 'glossary' | 'participant' | 'group' | 'domain';
@@ -25,6 +26,8 @@ export interface DetailsContext {
 
 export interface UIState {
   theme: Theme;
+  visualizationMode: VisualizationMode;
+  compareVersion: ProtocolVersion | null;
   isLeftCollapsed: boolean;
   isRightCollapsed: boolean;
   isScenarioToolbarCollapsed: boolean;
@@ -37,6 +40,8 @@ export interface UIState {
 
 const initial: UIState = {
   theme: 'dark',
+  visualizationMode: 'sequence',
+  compareVersion: '2.1.0',
   // Panels are open by default so first-time users can see the
   // walkthrough controls and details pane without having to discover
   // the toggle buttons. Users can still collapse them via the
@@ -55,6 +60,8 @@ export const uiStore = createExternalStore<UIState>(initial);
 
 export const uiActions = {
   setTheme: (theme: Theme) => uiStore.setState({ theme }),
+  setVisualizationMode: (visualizationMode: VisualizationMode) => uiStore.setState({ visualizationMode }),
+  setCompareVersion: (compareVersion: ProtocolVersion | null) => uiStore.setState({ compareVersion }),
   /**
    * Advance to the next theme in `THEME_ORDER`. Used by the header
    * theme-toggle button so a single click walks through all three

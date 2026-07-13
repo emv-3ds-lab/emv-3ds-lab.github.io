@@ -185,6 +185,20 @@ body {
   flex-direction: column;
 }
 
+/* Landing-page mode: the research pages are long-form documents, not
+   a fixed-viewport app. We relax the global scroll/height contract
+   so the user can scroll the document normally. The lab mode is the
+   default and is restored when the lab route is active. */
+body.lp-mode {
+  overflow: auto;
+}
+
+body.lp-mode #root {
+  height: auto;
+  min-height: 100vh;
+  display: block;
+}
+
 /* Header styling is defined in App.css as the source of truth.
    Earlier this file duplicated the .app-header rule, which created a
    cascade conflict between two slightly different declarations. The

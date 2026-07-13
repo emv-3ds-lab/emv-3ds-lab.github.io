@@ -1,20 +1,58 @@
 cff-version: 1.2.0
-title: EMV 3DS Protocol Lab
-message: Please cite this project when it helps your research, documentation, or teaching.
+title: EMV 3-D Secure Protocol Lab
+message: >-
+  If you use this lab in academic research, please cite the canonical
+  repository (this one) and the EMVCo 3-D Secure Core Specification that
+  the lab's wire shapes are anchored to. The lab ships a v2.3.1 payload
+  registry with field-level provenance; v2.1.0 / v2.2.0 data is sourced
+  from the 3dsecure.io re-typeset (3DSv2-api-documentation) and is
+  labelled non-authoritative in the UI.
 type: software
-authors:
-  - family-names: Wasif
-    given-names: C S
-repository-code: https://github.com/emv-3ds-lab/emv-3ds-lab.github.io
-url: https://github.com/emv-3ds-lab/emv-3ds-lab.github.io
-abstract: >
-  A vendor-neutral visual lab for understanding, comparing, and debugging
-  EMV 3-D Secure flows through scenario-driven diagrams, message inspection,
-  and protocol-oriented explanation.
+version: 0.3.0
+date-released: 2026-07-12
+license: Apache-2.0
+license-url: https://www.apache.org/licenses/LICENSE-2.0
 keywords:
   - emv-3ds
   - 3d-secure
-  - protocol-lab
+  - 3ds
+  - protocol-analysis
   - payment-security
-  - sequence-diagrams
-license: Apache-2.0
+  - sequence-diagram
+  - branch-view
+  - security-research
+authors:
+  - family-names: Wasif
+    given-names: Faisal
+    email: md.wasif.faisal@g.bracu.ac.bd
+    affiliation: BRAC University
+preferred-citation:
+  type: misc
+  title: EMV 3-D Secure Protocol Lab — research artifact
+  authors:
+    - family-names: Wasif
+      given-names: Faisal
+      email: md.wasif.faisal@g.bracu.ac.bd
+      affiliation: BRAC University
+  year: 2026
+  url: https://github.com/emv-3ds-lab/emv-3ds-lab.github.io
+references:
+  - type: standard
+    title: EMV 3-D Secure Protocol and Core Functions Specification
+    version: 2.3.1
+    date: 2022-08-31
+    publisher: EMVCo
+    notes: >-
+      The lab owns a personal-use copy under local-notes/EMVCo_3DS_CoreSpec_v2.3.1_20220831.md.
+      The file is git-ignored. All v2.3.1 payload builders are anchored
+      to Tables B.1–B.11 of this spec; field-level citations are recorded
+      in src/data/payloads/meta/fieldProvenance.ts.
+  - type: software
+    title: 3DSv2 API Documentation (3dsecure.io re-typeset)
+    version: '2.3.1'
+    publisher: 3dsecure.io
+    notes: >-
+      Comparison-only reference, stored under comparison/3DSv2-api-documentation/
+      and excluded from the public repository. v2.1.0 / v2.2.0 data
+      flows from this source. The lab's legal posture is recorded in
+      LICENSES/EMVCo-notice.md.

@@ -1,4 +1,5 @@
-import { defineConfig } from 'vite'
+// https://vite.dev/config/
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 function normalizeBasePath(basePath?: string) {
@@ -39,8 +40,15 @@ function getGitHubPagesBase() {
   return normalizeBasePath(repository)
 }
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  // vitest pulls in its own Vite (currently 5.x) which has a
+  // structurally-incompatible `Plugin` type with our project Vite 8.
+  // Casting keeps the build clean without changing runtime behaviour.
+  plugins: [react()] as never,
   base: getGitHubPagesBase(),
+  test: {
+    environment: 'happy-dom',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+  },
 })

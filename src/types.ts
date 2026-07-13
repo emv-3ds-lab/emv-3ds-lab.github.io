@@ -1,12 +1,32 @@
 export type MethodPath = 'reused' | 'executed' | 'unavailable' | 'timeout';
 export type DSRouting = 'normal' | 'failure';
 export type TransStatus = 'Y' | 'A' | 'N' | 'U' | 'R' | 'C' | 'D' | 'I' | 'S';
-export type ProtocolVersion = '2.1.0' | '2.2.0' | '2.3.1';
+export type ProtocolVersion = '2.1.0' | '2.2.0' | '2.3.1' | '2.4.0';
+export type VisualizationMode = 'sequence' | 'branch';
 export type ChallengeOutcome = 'success' | 'failure' | 'cancelled' | 'decoupled' | 'optout' | 'error' | 'invalid_cres';
 export type ErrorPath = 'none' | 'cres_invalid' | 'acs_error' | 'browser_timeout';
 export type ChallengePreference = '01' | '02' | '03' | '04';
 export type ChallengeMandated = 'Y' | 'N';
 export type ChallengePresentation = 'html' | 'oob';
+
+/**
+ * The eight canonical 3DS message types modelled in the lab. Declared
+ * here (rather than in `src/data/payloads/types.ts`) so that `FlowStep`
+ * can reference it without creating a circular import with the
+ * payload registry. The registry re-uses this union.
+ */
+export type MessageType =
+  | 'AReq'
+  | 'ARes'
+  | 'CReq'
+  | 'CRes'
+  | 'RReq'
+  | 'RRes'
+  | 'PReq'
+  | 'PRes'
+  | 'Erro'
+  | 'OReq'
+  | 'ORes';
 
 /**
  * Step archetype drives the visual shape of a node on the canvas. Without
@@ -117,6 +137,23 @@ export interface StepGroupMeta {
   introducedIn?: ProtocolVersion;
 }
 
+/**
+ * The wire shape of a 3DS message step's payload.
+ *
+ * Two forms are supported:
+ *   1. `StaticPayload` — an inline object. Used for the preauth PReq/PRes
+ *      payloads, network POST shapes, and other non-versioned artefacts.
+ *   2. `PayloadFn` — a function that builds the payload from the active
+ *      `Scenario`. Used for the AReq/ARes/CReq/CRes/RReq/RRes/Erro/OReq/ORes
+ *      families, which must change shape as the user toggles the
+ *      protocol-version picker.
+ *
+ * The consumer in `src/utils/protocolViz.ts::getDynamicPayload` handles
+ * both forms transparently.
+ */
+export type StaticPayload = Record<string, unknown>;
+export type PayloadFn = (scenario: Scenario) => StaticPayload;
+
 export interface FlowStep {
   id: string;
   num: string;
@@ -135,9 +172,22 @@ export interface FlowStep {
   source: ParticipantId | null; // null for local/internal notes
   target: ParticipantId | null;
   specRef?: string;
-  payload?: any; // Mock JSON or object payload
+  /**
+   * The wire-shape payload. See `StaticPayload` and `PayloadFn` for the
+   * two supported forms. When `messageType` is set, prefer the function
+   * form so the payload follows the active `scenario.protocolVersion`.
+   */
+  payload?: StaticPayload | PayloadFn;
   payloadTitle?: string;
   payloadType?: 'json' | 'form' | 'info';
+  /**
+   * The 3DS message type this step corresponds to (AReq, ARes, CReq, …).
+   * When set, the default payload function delegates to the versioned
+   * payload registry at `src/data/payloads/index.ts`. Optional because
+   * some steps (network POST shapes, ACS internal steps) do not map to
+   * a single 3DS message type.
+   */
+  messageType?: MessageType;
   /**
    * Step archetype drives the visual shape on the canvas. Optional for
    * backward-compat: when missing, we fall back to substring matching on

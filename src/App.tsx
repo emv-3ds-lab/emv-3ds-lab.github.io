@@ -11,20 +11,26 @@ import {
 } from '@xyflow/react';
 import type { Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Shield, Sun, Moon, Terminal, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookOpen, Eye, EyeOff, Crosshair, Link2, Sparkles, List, Download, Upload, Info, FileWarning } from 'lucide-react';
+import { Sun, Moon, Terminal, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, BookOpen, Eye, EyeOff, Crosshair, Link2, Sparkles, List, Download, Upload, Info, FileWarning } from 'lucide-react';
+import { lazy, Suspense } from 'react';
+import { useHashRoute, navigateToRoute, type RouteId } from './routes';
+import { Seo } from './components/Seo';
 import './App.css';
+import './landing-pages.css';
 
 import type { Scenario, FlowStep, StepGroupId, ParticipantId, ProtocolVersion } from './types';
 import { PARTICIPANTS, FLOW_STEPS, STEP_GROUPS } from './data/flowData';
-import { ParticipantHeaderNode, LifelineAnchorNode, LifelineBottomNode, InternalStepNode, DomainGroupNode, StepGroupBandNode, SwimlaneColumnNode, StepNumberRailNode } from './components/CustomNode';
+import { ParticipantHeaderNode, LifelineAnchorNode, LifelineBottomNode, InternalStepNode, DomainGroupNode, StepGroupBandNode, SwimlaneColumnNode, StepNumberRailNode, BranchFrameNode } from './components/CustomNode';
 import { CustomMessageEdge } from './components/CustomEdge';
+import { BranchMap } from './components/BranchMap';
 import { Controls } from './components/Controls';
 import { DetailsPanel } from './components/DetailsPanel';
 import type { DetailsContext } from './components/DetailsPanel';
-import { flowStore, flowActions } from './stores/flowStore';
+import { flowStore, flowActions, DEFAULT_SCENARIO } from './stores/flowStore';
 import { uiStore, uiActions } from './stores/uiStore';
 import { EMVCO_DEVICE_FIELDS } from './data/emvcoFingerprint';
 import { serializeSnapshot, parseSnapshot, downloadSnapshot } from './utils/snapshot';
+import { PROTOCOL_VERSIONS, getDynamicPayload } from './utils/protocolViz';
 
 /**
  * Re-exported from DetailsPanel for use in onNodeClick handlers.
@@ -41,6 +47,7 @@ const nodeTypes = {
   internalStep: InternalStepNode,
   domainContainer: DomainGroupNode,
   stepGroupBand: StepGroupBandNode,
+  branchFrame: BranchFrameNode,
   swimlaneColumn: SwimlaneColumnNode,
   stepNumberRail: StepNumberRailNode,
 };
@@ -62,18 +69,16 @@ const X_COORDS = {
 // X coordinate for the step-number rail (left margin of the diagram).
 const STEP_RAIL_X = -50;
 
-const DEFAULT_SCENARIO: Scenario = {
-  protocolVersion: '2.3.1',
-  methodPath: 'executed',
-  dsRouting: 'normal',
-  transStatus: 'Y',
-  challengeOutcome: 'success',
-  repeatChallenge: false,
-  errorPath: 'none',
-  challengePreference: '01',
-  challengeMandated: 'N',
-  challengePresentation: 'html',
-};
+// Soft cap on the share-URL state payload. 4 KB is comfortably below
+// every browser's URL limit (Chrome ~32 KB, Safari ~80 KB) while still
+// leaving room for the rest of the query string. Beyond this we drop
+// the per-step position from the URL and warn the user.
+const SHARE_URL_BUDGET_BYTES = 4 * 1024;
+const PROJECT_AUTHOR_LABEL = 'Wasif Faisal, BRAC University';
+const PROJECT_REPO_URL = 'https://github.com/emv-3ds-lab/emv-3ds-lab.github.io';
+const PROJECT_REPO_LABEL = 'emv-3ds-lab/emv-3ds-lab.github.io';
+const PROJECT_LINKEDIN_URL = 'https://www.linkedin.com/in/cswasif/';
+const PROJECT_LINKEDIN_LABEL = 'linkedin.com/in/cswasif';
 
 type ScenarioPreset = {
   id: string;
@@ -87,9 +92,62 @@ type SharedAppState = {
   currentStepIndex?: number;
   hiddenGroups?: StepGroupId[];
   theme?: 'dark' | 'light' | 'security';
+  visualizationMode?: 'sequence' | 'branch';
+  compareVersion?: ProtocolVersion | null;
   securityLensEnabled?: boolean;
   scenarioToolbarCollapsed?: boolean;
+  showListView?: boolean;
 };
+
+function BrandMark({ size = 18, className }: { size?: number; className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M12 2.75 18.5 6.5 12 10.25 5.5 6.5 12 2.75Z"
+        fill="currentColor"
+        fillOpacity="0.22"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.5 6.5V14L12 21.25V10.25L5.5 6.5Z"
+        fill="currentColor"
+        fillOpacity="0.14"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18.5 6.5V14L12 21.25V10.25L18.5 6.5Z"
+        fill="currentColor"
+        fillOpacity="0.08"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.4 13.2h2.05c1.05 0 1.78.63 1.78 1.55 0 .95-.73 1.6-1.78 1.6H9.4v-3.15Zm1.89-2.2c1.02 0 1.7-.59 1.7-1.46s-.68-1.44-1.7-1.44H9.4V11h1.89Z"
+        fill="currentColor"
+      />
+      <path
+        d="M14.9 8.1h1.1c1.68 0 2.8 1.04 2.8 2.61 0 1.59-1.12 2.64-2.8 2.64h-1.1"
+        stroke="currentColor"
+        strokeWidth="1.35"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 const SCENARIO_PRESETS: ScenarioPreset[] = [
   { id: 'frictionless_y', label: 'Frictionless Y', summary: 'Approval without a visible challenge.', scenario: { ...DEFAULT_SCENARIO, transStatus: 'Y' } },
@@ -120,10 +178,33 @@ const getScenarioSummary = (scenario: Scenario) => {
   }
 };
 
-const buildShareUrl = (state: SharedAppState) => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('state', JSON.stringify(state));
-  return url;
+/**
+ * Build a permalink for the current lab state. We anchor the URL to
+ * `window.location.origin + window.location.pathname` (rather than
+ * `new URL(window.location.href)`) so we never write state into a
+ * parent window when the lab is embedded as an iframe. Returns the
+ * URL plus a flag indicating whether the state was truncated to fit
+ * within `SHARE_URL_BUDGET_BYTES`.
+ */
+const buildShareUrl = (state: SharedAppState): { url: URL; truncated: boolean } => {
+  const base = typeof window !== 'undefined'
+    ? window.location.origin + window.location.pathname
+    : '/';
+  const url = new URL(base);
+  const json = JSON.stringify(state);
+  if (json.length <= SHARE_URL_BUDGET_BYTES) {
+    url.searchParams.set('state', json);
+    return { url, truncated: false };
+  }
+  // Truncate: drop the per-step position (the most expensive field)
+  // and retry. If that is still too large, fall back to a bare URL.
+  const trimmed: SharedAppState = { ...state, currentStepIndex: undefined };
+  const trimmedJson = JSON.stringify(trimmed);
+  if (trimmedJson.length <= SHARE_URL_BUDGET_BYTES) {
+    url.searchParams.set('state', trimmedJson);
+    return { url, truncated: true };
+  }
+  return { url, truncated: true };
 };
 
 function AppContent() {
@@ -147,6 +228,17 @@ function AppContent() {
   const detailsContext = uiStore.useStore((s) => s.detailsContext);
   const hasLoadedSharedState = uiStore.useStore((s) => s.hasLoadedSharedState);
   const showListView = uiStore.useStore((s) => s.showListView);
+  const visualizationMode = uiStore.useStore((s) => s.visualizationMode);
+  const compareVersion = uiStore.useStore((s) => s.compareVersion);
+
+  // === Memoized participant lookup. The render path queries the
+  // === participant table inside the active-steps loop (3 sites: rail
+  // color, anchor color, and internal-step color). For 30+ active
+  // steps that is 90+ O(n) scans per render. Stable Map → O(1).
+  const participantsById = useMemo(
+    () => new Map(PARTICIPANTS.map((p) => [p.id, p] as const)),
+    [],
+  );
 
   // Local-only UI: not in any store because nothing else needs it.
   const [isProfilingMounted, setIsProfilingMounted] = useState(false);
@@ -286,7 +378,7 @@ function AppContent() {
   // Persist a shareable URL whenever the user mutates state.
   useEffect(() => {
     if (!hasLoadedSharedState) return;
-    const url = buildShareUrl({
+    const { url, truncated } = buildShareUrl({
       scenario,
       currentStepIndex,
       hiddenGroups: [...hiddenGroups],
@@ -295,6 +387,16 @@ function AppContent() {
       scenarioToolbarCollapsed: isScenarioToolbarCollapsed,
     });
     window.history.replaceState({}, '', url);
+    if (truncated) {
+      // Visible in the import-toast slot. Not warning-grade because the
+      // permalink is still loadable; the position is just lost.
+      setSnapshotImportStatus({
+        kind: 'err',
+        message: 'Share link truncated — current step position omitted to fit URL budget.',
+      });
+      if (snapshotImportTimerRef.current) window.clearTimeout(snapshotImportTimerRef.current);
+      snapshotImportTimerRef.current = window.setTimeout(() => setSnapshotImportStatus(null), 3500);
+    }
   }, [hasLoadedSharedState, scenario, currentStepIndex, hiddenGroups, theme, securityLensEnabled, isScenarioToolbarCollapsed]);
 
   // Auto-play effect. Honors prefers-reduced-motion by holding the step
@@ -315,6 +417,22 @@ function AppContent() {
     }, playSpeed);
     return () => clearInterval(interval);
   }, [isPlaying, playSpeed, prefersReducedMotion]);
+
+  // === Stable dispatcher for the 1–8 digit keyboard shortcuts. We use
+  // === a `useCallback` that takes an index so the closure is stable
+  // === and can be safely referenced from the keydown handler without
+  // === a forward-ref hack.
+  const applyScenarioPresetByIndex = useCallback((idx: number) => {
+    const preset = SCENARIO_PRESETS[idx];
+    if (preset) {
+      flowActions.setScenario(preset.scenario);
+      flowActions.reset();
+      flowActions.showAllGroups();
+      uiActions.setDetailsContext({ kind: 'step', stepId: 'step_0A' });
+      uiActions.setLeftCollapsed(false);
+      uiActions.setRightCollapsed(false);
+    }
+  }, []);
 
   // Keyboard Navigation Support. Wrapped in useCallback so the listener
   // identity is stable across renders and we don't thrash window event
@@ -344,30 +462,11 @@ function AppContent() {
       flowActions.setCurrentStepIndex(len - 1);
     } else if (/^[1-8]$/.test(e.key)) {
       // Digit shortcuts jump to scenario presets 1–8. The 8 presets are
-      // defined in SCENARIO_PRESETS in a stable order. We dispatch via a
-      // ref because the actual `applyScenarioPreset` callback is declared
-      // later in the component body and the keydown handler needs to
-      // exist before any of those.
+      // defined in SCENARIO_PRESETS in a stable order.
       e.preventDefault();
-      const idx = Number(e.key) - 1;
-      applyScenarioPresetRef.current?.(idx);
+      applyScenarioPresetByIndex(Number(e.key) - 1);
     }
-  }, []);
-
-  // Ref that lets the keydown handler call into the (later-declared)
-  // `applyScenarioPreset` callback. The ref is updated in an effect
-  // below so it always points at the latest closure.
-  const applyScenarioPresetRef = useRef<(idx: number) => void>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { applyScenarioPresetRef.current = (idx) => {
-    const preset = SCENARIO_PRESETS[idx];
-    if (preset) {
-      flowActions.setScenario(preset.scenario);
-      flowActions.reset();
-      flowActions.showAllGroups();
-      uiActions.setDetailsContext({ kind: 'step', stepId: 'step_0A' });
-    }
-  }; }, []);
+  }, [applyScenarioPresetByIndex]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -377,19 +476,16 @@ function AppContent() {
   // React Flow instance view fitting
   const { fitView } = useReactFlow();
 
+  // Consolidated fitView effect. The previous code had two adjacent
+  // effects racing on first mount (320 ms + 150 ms timers). The second
+  // one shadowed the first when both fired. We now keep one effect that
+  // runs once on layout-relevant changes.
   useEffect(() => {
     const timer = setTimeout(() => {
       fitView({ duration: 350, padding: 0.15 });
-    }, 320);
+    }, 280);
     return () => clearTimeout(timer);
   }, [isLeftCollapsed, isRightCollapsed, activeSteps.length, fitView]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fitView({ padding: 0.12 });
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [fitView]);
 
   // === Group visibility helpers (delegated to flowActions). ===
   const toggleGroupVisibility = useCallback((groupId: StepGroupId) => {
@@ -611,7 +707,7 @@ function AppContent() {
       const isError = /err|invalid/i.test(step.num) || step.id.includes('err') || step.id.includes('invalid');
 
       const railSource = step.source
-        ? PARTICIPANTS.find((p) => p.id === step.source)
+        ? participantsById.get(step.source)
         : undefined;
       const railColor = railSource ? railSource.stroke : '#6366f1';
       nodesList.push({
@@ -658,7 +754,7 @@ function AppContent() {
           draggable: false,
         });
       } else if (step.source) {
-        const p = PARTICIPANTS.find(part => part.id === step.source);
+        const p = participantsById.get(step.source);
         const pColor = p ? p.stroke : '#6366f1';
         const boxX = step.source === 'ACS'
           ? X_COORDS[step.source] - 210
@@ -733,7 +829,7 @@ function AppContent() {
       const isCurrent = idx === currentStepIndex;
 
       if (!step.source || !step.target) return;
-      const sourcePart = PARTICIPANTS.find(p => p.id === step.source);
+      const sourcePart = participantsById.get(step.source);
       const sourceColor = sourcePart ? sourcePart.stroke : '#6366f1';
 
       const isSourceLeft = X_COORDS[step.source] < X_COORDS[step.target];
@@ -742,18 +838,22 @@ function AppContent() {
 
       let fieldsPreview: string[] = [];
       let msgType = '';
-      if (step.payload) {
-        const keys = Object.keys(step.payload);
+      // === Resolve the payload through the versioned registry so the
+      // === preview reflects the active protocol version, not the
+      // === function form (or the stale inline object).
+      const resolvedPayload = getDynamicPayload(step, scenario);
+      if (resolvedPayload) {
+        const keys = Object.keys(resolvedPayload);
         if (step.payloadType === 'form') {
-          if (step.payload.decodedData) {
-            fieldsPreview = Object.keys(step.payload.decodedData);
-          } else if (step.payload.fields) {
-            fieldsPreview = Object.keys(step.payload.fields);
+          if (resolvedPayload.decodedData && typeof resolvedPayload.decodedData === 'object') {
+            fieldsPreview = Object.keys(resolvedPayload.decodedData as Record<string, unknown>);
+          } else if (resolvedPayload.fields && typeof resolvedPayload.fields === 'object') {
+            fieldsPreview = Object.keys(resolvedPayload.fields as Record<string, unknown>);
           }
           msgType = step.payloadTitle ? step.payloadTitle.split(' ')[0] : 'POST';
         } else {
-          if (keys.includes('body') && typeof step.payload.body === 'object' && step.payload.body !== null) {
-            fieldsPreview = Object.keys(step.payload.body);
+          if (keys.includes('body') && typeof resolvedPayload.body === 'object' && resolvedPayload.body !== null) {
+            fieldsPreview = Object.keys(resolvedPayload.body as Record<string, unknown>);
           } else {
             fieldsPreview = keys.filter(k => k !== 'action' && k !== 'merchantId');
           }
@@ -904,18 +1004,17 @@ function AppContent() {
   }, []);
 
   const applyScenarioPreset = useCallback((preset: ScenarioPreset) => {
-    flowActions.setScenario(preset.scenario);
-    flowActions.reset();
-    flowActions.showAllGroups();
-    uiActions.setDetailsContext({ kind: 'step', stepId: 'step_0A' });
-    uiActions.setLeftCollapsed(false);
-    uiActions.setRightCollapsed(false);
-  }, []);
+    // Delegate to the index-keyed dispatcher so we never have two
+    // divergent bodies. The index version is the one wired to keyboard
+    // shortcuts and is declared higher in the component so the keydown
+    // listener can call it without a forward-ref hack.
+    applyScenarioPresetByIndex(SCENARIO_PRESETS.findIndex((p) => p.id === preset.id));
+  }, [applyScenarioPresetByIndex]);
 
   const copyShareLink = useCallback(async () => {
     const state = flowStore.getState();
     const ui = uiStore.getState();
-    const url = buildShareUrl({
+    const { url, truncated } = buildShareUrl({
       scenario: state.scenario,
       currentStepIndex: state.currentStepIndex,
       hiddenGroups: [...state.hiddenGroups],
@@ -926,6 +1025,11 @@ function AppContent() {
     window.history.replaceState({}, '', url);
     await navigator.clipboard.writeText(url.toString());
     uiActions.setShareCopied(true);
+    if (truncated) {
+      setSnapshotImportStatus({ kind: 'err', message: 'Share link truncated — current step position omitted to fit URL budget.' });
+      if (snapshotImportTimerRef.current) window.clearTimeout(snapshotImportTimerRef.current);
+      snapshotImportTimerRef.current = window.setTimeout(() => setSnapshotImportStatus(null), 3500);
+    }
     setTimeout(() => uiActions.setShareCopied(false), 1600);
   }, []);
 
@@ -990,12 +1094,12 @@ function AppContent() {
 
   const liveStepAnnouncement = useMemo(() => {
     if (!currentStep) return '';
-    const src = PARTICIPANTS.find(p => p.id === currentStep.source);
-    const tgt = PARTICIPANTS.find(p => p.id === currentStep.target);
+    const src = currentStep.source ? participantsById.get(currentStep.source) : undefined;
+    const tgt = currentStep.target ? participantsById.get(currentStep.target) : undefined;
     const from = src ? src.name : 'Internal step';
     const to = tgt ? tgt.name : '';
     return `Step ${currentStep.num}: ${currentStep.label}. From ${from}${to ? ` to ${to}` : ''}.`;
-  }, [currentStep]);
+  }, [currentStep, participantsById]);
 
   // Note: the keyboard-shortcut for 1–8 scenario presets is wired via
   // `applyScenarioPresetRef` declared earlier (it must exist before
@@ -1003,6 +1107,12 @@ function AppContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      <Seo
+        title="EMV 3DS Protocol Lab | Visual EMV 3-D Secure Explorer"
+        description="An interactive visual lab for exploring EMV 3-D Secure browser flows, version differences, payload provenance, and security-relevant protocol behavior. v2.1.0, v2.2.0, v2.3.1."
+        path="/"
+        ogType="website"
+      />
       {/* Live-region announcement for assistive tech.
           Off-screen visually, but exposed to screen readers via aria-live. */}
       <div
@@ -1017,7 +1127,7 @@ function AppContent() {
       {/* Compact Top Bar */}
       <header className="app-header">
         <div className="header-brand">
-          <Shield size={16} className="logo-icon" aria-hidden="true" />
+          <BrandMark size={16} className="logo-icon" />
           <span className="header-title">EMV 3DS Protocol Lab</span>
           <span className="header-divider" />
           <span
@@ -1060,6 +1170,14 @@ function AppContent() {
           )}
         </div>
 
+        <nav className="lp-inlab-nav" aria-label="Research pages">
+          <a href="#/versions" title="EMV 3DS version matrix">Versions</a>
+          <a href="#/fields" title="EMV 3DS field reference">Fields</a>
+          <a href="#/flows" title="EMV 3DS flow comparison">Flows</a>
+          <a href="#/pitfalls" title="EMV 3DS implementation pitfalls">Pitfalls</a>
+          <a href="#/cite" title="How to cite this lab">Cite</a>
+        </nav>
+
         <div className="header-actions">
           {/* === Version toggle (audit §1.2) === */}
           <div
@@ -1068,7 +1186,7 @@ function AppContent() {
             aria-label="EMV 3DS protocol version"
             title="Switch the active protocol version. Newer versions hide phases that did not exist yet."
           >
-            {(['2.1.0', '2.2.0', '2.3.1'] as ProtocolVersion[]).map((v) => (
+            {PROTOCOL_VERSIONS.map((v) => (
               <button
                 key={v}
                 type="button"
@@ -1079,6 +1197,28 @@ function AppContent() {
                 title={`Switch to EMV 3DS v${v}`}
               >
                 {v}
+              </button>
+            ))}
+          </div>
+
+          {/* === Visualization mode toggle (sequence ↔ branch) === */}
+          <div
+            className="version-toggle"
+            role="radiogroup"
+            aria-label="Visualization mode"
+            title="Switch between the linear sequence diagram and the branch-triage view"
+          >
+            {(['sequence', 'branch'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={visualizationMode === m}
+                onClick={() => uiActions.setVisualizationMode(m)}
+                className={`version-toggle-btn ${visualizationMode === m ? 'active' : ''}`}
+                title={`Switch to ${m} visualization`}
+              >
+                {m === 'sequence' ? 'Sequence' : 'Branch'}
               </button>
             ))}
           </div>
@@ -1398,8 +1538,13 @@ function AppContent() {
               When uiStore.showListView is true, we skip the ReactFlow
               mount entirely (xyflow v12 leaks listeners if you unmount
               while playing; toggling list view exits play mode first).
+
+              When uiStore.visualizationMode is 'branch', we render the
+              BranchMap component instead of ReactFlow. The two views
+              share the same flowStore + uiStore state, so step selection
+              and details-panel content stay in sync.
             */}
-            {!showListView && (
+            {!showListView && visualizationMode === 'sequence' && (
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -1453,6 +1598,23 @@ function AppContent() {
                 aria-label="Diagram minimap"
               />
             </ReactFlow>
+            )}
+
+            {!showListView && visualizationMode === 'branch' && (
+              <BranchMap
+                scenario={scenario}
+                activeSteps={activeSteps}
+                currentStepIndex={currentStepIndex}
+                compareVersion={compareVersion}
+                onSelectStep={(idx) => {
+                  flowActions.togglePlay();
+                  flowActions.setCurrentStepIndex(idx);
+                  const step = flowStore.getState().activeSteps[idx];
+                  if (step) {
+                    uiActions.setDetailsContext({ kind: 'step', stepId: step.id });
+                  }
+                }}
+              />
             )}
 
             {isProfilingMounted && !showListView && <BrowserFingerprintWidget />}
@@ -1586,12 +1748,47 @@ function AppContent() {
         role="note"
         aria-label="Sandbox isolation notice"
       >
-        <FileWarning size={12} aria-hidden="true" />
-        <span>
-          <strong>Sandbox only.</strong> This tool renders static reference payloads —
-          no AReq is signed, no ACS is contacted, no data leaves your browser.
-          Mock responses are <em>not</em> EMVCo-certified kernel behavior.
-        </span>
+        <div className="sandbox-banner-copy">
+          <FileWarning size={12} aria-hidden="true" />
+          <span>
+            <strong>Sandbox only.</strong> This tool renders static reference payloads —
+            no AReq is signed, no ACS is contacted, no data leaves your browser.
+            Mock responses are <em>not</em> EMVCo-certified kernel behavior.
+          </span>
+        </div>
+        <div className="sandbox-banner-meta">
+          <span className="sandbox-credit">Built by {PROJECT_AUTHOR_LABEL}</span>
+          <a
+            className="sandbox-repo-link"
+            href={PROJECT_LINKEDIN_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open LinkedIn profile ${PROJECT_LINKEDIN_LABEL}`}
+            title={`Open LinkedIn profile: ${PROJECT_LINKEDIN_LABEL}`}
+          >
+            <Link2 size={12} aria-hidden="true" />
+            <span>{PROJECT_LINKEDIN_LABEL}</span>
+          </a>
+          <a
+            className="sandbox-repo-link"
+            href={PROJECT_REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Open GitHub repository ${PROJECT_REPO_LABEL}`}
+            title={`Open GitHub repository: ${PROJECT_REPO_LABEL}`}
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              width="12"
+              height="12"
+              fill="currentColor"
+            >
+              <path d="M12 0.5C5.372 0.5 0 5.872 0 12.5C0 17.802 3.438 22.302 8.205 23.888C8.805 23.999 9.025 23.627 9.025 23.308C9.025 23.021 9.014 22.072 9.008 20.814C5.672 21.539 4.968 19.207 4.968 19.207C4.422 17.821 3.633 17.452 3.633 17.452C2.545 16.708 3.715 16.723 3.715 16.723C4.918 16.807 5.551 17.958 5.551 17.958C6.618 19.787 8.351 19.259 9.034 18.953C9.142 18.18 9.451 17.652 9.793 17.353C7.13 17.05 4.33 16.021 4.33 11.427C4.33 10.119 4.797 9.049 5.563 8.213C5.438 7.91 5.028 6.69 5.681 5.039C5.681 5.039 6.688 4.717 8.981 6.269C9.938 6.003 10.965 5.87 11.989 5.866C13.012 5.87 14.04 6.003 14.998 6.269C17.288 4.717 18.293 5.039 18.293 5.039C18.948 6.69 18.538 7.91 18.413 8.213C19.181 9.049 19.646 10.119 19.646 11.427C19.646 16.033 16.84 17.046 14.17 17.342C14.6 17.714 14.984 18.443 14.984 19.561C14.984 21.166 14.969 22.887 14.969 23.308C14.969 23.63 15.186 24.005 15.795 23.887C20.565 22.299 24 17.801 24 12.5C24 5.872 18.627 0.5 12 0.5Z" />
+            </svg>
+            <span>{PROJECT_REPO_LABEL}</span>
+          </a>
+        </div>
       </footer>
     </div>
   );
@@ -1641,7 +1838,7 @@ const BrowserFingerprintWidget = memo(function BrowserFingerprintWidget() {
       case 'BrowserAcceptHeader': return null; // Not browser-derivable on the client.
       case 'BrowserIP': return null; // Server-side only.
       case 'BrowserJavaEnabled': return String(liveData.java);
-      case 'BrowserJavaScriptEnabled': return 'true'; // The widget itself proves this.
+      case 'BrowserJavaScriptEnabled': return 'true (widget runtime)';
       case 'BrowserLanguage': return liveData.language;
       case 'BrowserColorDepth': return `${liveData.colorDepth}-bit`;
       case 'BrowserScreenHeight': return String(window.screen.height);
@@ -1716,10 +1913,141 @@ const BrowserFingerprintWidget = memo(function BrowserFingerprintWidget() {
   );
 });
 
+// === Lazy-loaded page bundles ===
+//
+// The research landing pages are split into their own bundles so the
+// initial load (the interactive lab) does not pay for static-text
+// content. The lab itself stays in the main bundle because it owns the
+// page chrome (header, scenario toolbar, footer) that every route uses.
+const VersionsPage = lazy(() => import('./pages/VersionsPage').then((m) => ({ default: m.VersionsPage })));
+const FieldsPage = lazy(() => import('./pages/FieldsPage').then((m) => ({ default: m.FieldsPage })));
+const FlowsPage = lazy(() => import('./pages/FlowsPage').then((m) => ({ default: m.FlowsPage })));
+const PitfallsPage = lazy(() => import('./pages/PitfallsPage').then((m) => ({ default: m.PitfallsPage })));
+const CitePage = lazy(() => import('./pages/CitePage').then((m) => ({ default: m.CitePage })));
+
+/**
+ * The per-route top-level render. The default 'lab' route is rendered
+ * inline (the `AppContent` body, with React Flow + the scenario
+ * toolbar); the other routes lazy-load their dedicated page bundle.
+ *
+ * We also toggle `body.lp-mode` so the global `overflow: hidden` /
+ * `#root { height: 100vh }` contract used by the lab is dropped for
+ * the long-form research pages. The class is removed on unmount so
+ * the lab regains its full-viewport layout.
+ */
+function RoutedApp() {
+  const route = useHashRoute();
+
+  useEffect(() => {
+    if (route === 'lab') {
+      document.body.classList.remove('lp-mode');
+    } else {
+      document.body.classList.add('lp-mode');
+    }
+    return () => {
+      document.body.classList.remove('lp-mode');
+    };
+  }, [route]);
+
+  if (route === 'lab') {
+    return <AppContent />;
+  }
+
+  return (
+    <div className="lp-shell">
+      <SiteHeader route={route} />
+      <Suspense fallback={<RouteFallback label={LABEL_FOR[route]} />}>
+        {route === 'versions' ? <VersionsPage /> : null}
+        {route === 'fields' ? <FieldsPage /> : null}
+        {route === 'flows' ? <FlowsPage /> : null}
+        {route === 'pitfalls' ? <PitfallsPage /> : null}
+        {route === 'cite' ? <CitePage /> : null}
+      </Suspense>
+      <SiteFooter />
+    </div>
+  );
+}
+
+const LABEL_FOR: Record<RouteId, string> = {
+  lab: 'Lab',
+  versions: 'Version Matrix',
+  fields: 'Field Reference',
+  flows: 'Flow Comparison',
+  pitfalls: 'Pitfalls',
+  cite: 'Cite',
+};
+
+function RouteFallback({ label }: { label: string }) {
+  return (
+    <main className="lp-main">
+      <p className="lp-eyebrow">Loading</p>
+      <h1>{label}</h1>
+      <p className="lp-lede">Fetching the latest registry snapshot…</p>
+    </main>
+  );
+}
+
+const NAV_ITEMS: { id: RouteId; label: string; hash: string; aria: string }[] = [
+  { id: 'lab', label: 'Lab', hash: '#/', aria: 'Open the interactive protocol lab' },
+  { id: 'versions', label: 'Version Matrix', hash: '#/versions', aria: 'Open the EMV 3DS version matrix page' },
+  { id: 'fields', label: 'Field Reference', hash: '#/fields', aria: 'Open the EMV 3DS field reference page' },
+  { id: 'flows', label: 'Flow Comparison', hash: '#/flows', aria: 'Open the EMV 3DS flow comparison page' },
+  { id: 'pitfalls', label: 'Pitfalls', hash: '#/pitfalls', aria: 'Open the EMV 3DS implementation pitfalls page' },
+  { id: 'cite', label: 'Cite', hash: '#/cite', aria: 'Open the citation page' },
+];
+
+function SiteHeader({ route }: { route: RouteId }) {
+  return (
+    <header className="lp-header lp-site-header" role="banner">
+      <div className="lp-site-header-inner">
+        <a
+          className="lp-site-brand"
+          href="#/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigateToRoute('lab');
+          }}
+          aria-label="EMV 3DS Protocol Lab — open the lab"
+        >
+          <BrandMark size={18} className="logo-icon" />
+          <span>EMV 3DS Protocol Lab</span>
+        </a>
+        <nav className="lp-site-nav" aria-label="Primary">
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.id}
+              className={`lp-site-nav-link ${route === item.id ? 'is-active' : ''}`}
+              href={item.hash}
+              onClick={(e) => {
+                e.preventDefault();
+                navigateToRoute(item.id);
+              }}
+              aria-label={item.aria}
+              aria-current={route === item.id ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function SiteFooter() {
+  return (
+    <footer className="lp-foot lp-site-foot" role="contentinfo">
+      <p>
+        Built by Wasif Faisal, BRAC University. Open data, open research. Apache-2.0.
+      </p>
+    </footer>
+  );
+}
+
 export default function App() {
   return (
     <ReactFlowProvider>
-      <AppContent />
+      <RoutedApp />
     </ReactFlowProvider>
   );
 }

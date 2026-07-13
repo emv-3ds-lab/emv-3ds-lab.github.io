@@ -10,6 +10,7 @@
  */
 
 import type { Scenario, StepGroupId } from '../types';
+import { validateScenario } from './protocolViz';
 
 /** Bump this whenever the snapshot shape changes. */
 export const SNAPSHOT_SCHEMA_VERSION = 1 as const;
@@ -90,6 +91,19 @@ export function parseSnapshot(raw: string): SnapshotParseResult {
 
   if (!obj.scenario || typeof obj.scenario !== 'object') {
     errors.push('Snapshot is missing a `scenario` object.');
+    return { ok: false, errors, warnings };
+  }
+
+  // === Validate the embedded Scenario BEFORE we try to use it.
+  // === Without this, a snapshot like `{ scenario: { protocolVersion: '2.3.1' } }`
+  // === is accepted, and downstream calls like `step.isActive(scenario)` silently
+  // === return false because `scenario.transStatus` is undefined. The user
+  // === then sees an empty canvas with no explanation.
+  const scenarioErrors = validateScenario(obj.scenario);
+  if (scenarioErrors.length > 0) {
+    errors.push(
+      `Snapshot scenario is malformed: ${scenarioErrors.join(' ')}`
+    );
     return { ok: false, errors, warnings };
   }
 

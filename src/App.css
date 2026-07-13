@@ -1137,7 +1137,9 @@ body.light-theme {
 .sandbox-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 6px 14px;
   font-size: 11px;
   line-height: 1.45;
@@ -1145,6 +1147,54 @@ body.light-theme {
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
 }
+.sandbox-banner-copy,
+.sandbox-banner-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sandbox-banner-copy {
+  flex: 1 1 420px;
+}
+
+.sandbox-banner-meta {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.sandbox-credit {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.sandbox-repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.sandbox-repo-link:hover {
+  border-color: rgba(155, 200, 66, 0.35);
+  background: rgba(155, 200, 66, 0.08);
+  color: var(--text-primary);
+}
+
+.sandbox-repo-link:focus-visible {
+  outline: 2px solid var(--accent-secondary);
+  outline-offset: 2px;
+}
+
 .sandbox-banner strong {
   color: var(--text-primary);
   font-weight: 700;
@@ -1164,3 +1214,299 @@ body.light-theme {
   gap: 8px;
 }
 
+/* === BranchMap (audit §P1 #9 — wired but unstyled) ===
+   The visualization mode toggle can swap the ReactFlow canvas for
+   the BranchMap. The two-column triage view shows the active
+   scenario's branch lane, the version diff, and the step groups.
+   The CSS was missing entirely when the component was first wired;
+   these rules restore visual parity with the rest of the lab. */
+.branch-map-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  padding: 24px 32px;
+  overflow-y: auto;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.branch-map-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.branch-map-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+}
+
+.branch-map-summary-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-primary);
+}
+
+.branch-map-summary-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.branch-map-summary-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.branch-map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .branch-map-summary {
+    grid-template-columns: 1fr;
+  }
+  .branch-map-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.branch-map-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.branch-map-column-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.branch-map-column-title-secondary {
+  margin-top: 8px;
+}
+
+.branch-map-card {
+  --branch-accent: var(--accent-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-left: 3px solid var(--branch-accent);
+  border-radius: 8px;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.branch-map-card.is-current {
+  border-color: var(--branch-accent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--branch-accent) 8%, var(--bg-secondary)), var(--bg-secondary));
+  transform: translateX(2px);
+}
+
+.branch-map-card-secondary {
+  background: var(--bg-tertiary);
+}
+
+.branch-map-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.branch-map-card-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--branch-accent);
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--branch-accent) 12%, transparent);
+  border-radius: 4px;
+}
+
+.branch-map-card-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.branch-map-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.branch-map-step-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.branch-map-step-btn:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-primary);
+}
+
+.branch-map-step-btn.is-current {
+  background: color-mix(in srgb, var(--branch-accent) 14%, var(--bg-tertiary));
+  border-color: var(--branch-accent);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.branch-map-step-num {
+  flex: 0 0 auto;
+  min-width: 28px;
+  text-align: center;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary);
+  padding: 2px 6px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+}
+
+.branch-map-step-btn.is-current .branch-map-step-num {
+  color: var(--bg-primary);
+  background: var(--branch-accent);
+  border-color: var(--branch-accent);
+}
+
+.branch-map-step-label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.branch-map-branch-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.branch-lane-card {
+  --branch-accent: var(--accent-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-top: 2px solid var(--branch-accent);
+  border-radius: 8px;
+  opacity: 0.55;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.branch-lane-card.is-active {
+  opacity: 1;
+  background: color-mix(in srgb, var(--branch-accent) 6%, var(--bg-secondary));
+  transform: translateY(-1px);
+}
+
+.branch-lane-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.branch-lane-copy {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.branch-map-closure {
+  position: relative;
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 8px;
+}
+
+.branch-map-closure-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-primary);
+  margin-bottom: 6px;
+}
+
+.branch-map-closure-copy {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  padding-right: 24px;
+}
+
+.branch-map-closure-copy strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.branch-map-closure-arrow {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  color: var(--accent-primary);
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .branch-map-card,
+  .branch-lane-card,
+  .branch-map-step-btn {
+    transition: none !important;
+  }
+}

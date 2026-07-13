@@ -8,7 +8,6 @@ export interface FlowState {
   scenario: Scenario;
   currentStepIndex: number;
   hiddenGroups: StepGroupId[];
-  hiddenParticipantCount: number;
   isPlaying: boolean;
   playSpeed: PlaySpeed;
   activeSteps: FlowStep[];
@@ -24,6 +23,7 @@ const VERSION_ORDER: Record<ProtocolVersion, number> = {
   '2.1.0': 1,
   '2.2.0': 2,
   '2.3.1': 3,
+  '2.4.0': 4,
 };
 
 function isStepGroupAvailableForVersion(groupId: StepGroupId, version: ProtocolVersion): boolean {
@@ -39,6 +39,43 @@ function deriveActiveSteps(scenario: Scenario, hiddenGroups: Set<StepGroupId>): 
       (!step.groupId || !hiddenGroups.has(step.groupId)) &&
       (!step.groupId || isStepGroupAvailableForVersion(step.groupId, scenario.protocolVersion))
   );
+}
+
+// === Exported for unit tests. The spec-bound derivation logic is the
+// === single most-testable piece of the lab; covering it with a small
+// === test set gives the CI a real teeth when an EMVCo version bumps.
+export function _deriveActiveStepsForTest(
+  steps: FlowStep[],
+  scenario: Scenario,
+  visibleGroups: Set<StepGroupId>,
+): FlowStep[] {
+  return steps.filter((step) => {
+    if (!step.groupId) return false;
+    if (!visibleGroups.has(step.groupId)) return false;
+    return step.isActive(scenario);
+  });
+}
+
+export function computeSequenceDigest(
+  scenario: Scenario,
+  version: ProtocolVersion,
+  currentStepIndex: number,
+): string {
+  // Stable, hashable representation used by the URL persist effect and
+  // the share-link deduper. Sorted on key=value pairs so the digest
+  // is stable across field-order changes.
+  return [
+    `t=${scenario.transStatus}`,
+    `m=${scenario.methodPath}`,
+    `r=${scenario.dsRouting}`,
+    `e=${scenario.errorPath}`,
+    `cp=${scenario.challengePreference}`,
+    `cm=${scenario.challengeMandated}`,
+    `co=${scenario.challengeOutcome}`,
+    `rx=${scenario.repeatChallenge ? 1 : 0}`,
+    `v=${version}`,
+    `i=${currentStepIndex}`,
+  ].join('|');
 }
 
 function deriveActiveGroupIds(activeSteps: FlowStep[]): StepGroupId[] {
@@ -65,7 +102,6 @@ const initial: FlowState = {
   scenario: DEFAULT_SCENARIO,
   currentStepIndex: 0,
   hiddenGroups: [],
-  hiddenParticipantCount: 0,
   isPlaying: false,
   playSpeed: 1500,
   activeSteps: deriveActiveSteps(DEFAULT_SCENARIO, new Set()),
@@ -138,9 +174,6 @@ export const flowActions = {
       const all = s.activeGroupIds;
       return rebuild(s.scenario, [...all], s.currentStepIndex);
     });
-  },
-  incrementHiddenParticipants: () => {
-    flowStore.setState((s) => ({ hiddenParticipantCount: s.hiddenParticipantCount + 1 }));
   },
   hydrate: (partial: { scenario?: Scenario; currentStepIndex?: number; hiddenGroups?: StepGroupId[] }) => {
     flowStore.setState((s) => {

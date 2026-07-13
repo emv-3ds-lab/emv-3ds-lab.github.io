@@ -154,9 +154,16 @@ const REQUIRED_ARES_FIELDS: { field: string; specRef: string; note?: string }[] 
 ];
 
 const VALID_TRANS_STATUS = ['Y', 'A', 'N', 'U', 'R', 'C', 'D', 'I', 'S'] as const;
+// Per EMVCo 3DS Core Spec §A.1 the canonical deviceChannel values are
+// 01 (App-based / SDK), 02 (Browser), and 03 (3RI). Additional 3RI
+// subtypes (04 onwards) are allocated via DS configuration and
+// processed in the spec appendices, not the core tables. We do not
+// reject them outright; instead we surface an info note that the
+// researcher should verify against the v2.x.0 appendix they are
+// studying. This avoids false positives on legitimate 3RI samples.
 const VALID_DEVICE_CHANNEL = ['01', '02', '03'] as const;
 const VALID_THREEDS_COMP_IND = ['Y', 'N', 'U'] as const;
-const SUPPORTED_VERSIONS = ['2.1.0', '2.2.0', '2.3.1'] as const;
+const SUPPORTED_VERSIONS = ['2.1.0', '2.2.0', '2.3.1', '2.4.0'] as const;
 
 /**
  * Validate a (possibly raw or JWS-encoded) AReq or ARes payload.
@@ -310,12 +317,14 @@ function validatePlainPayload(payload: Record<string, unknown>): ValidationIssue
         });
       }
     }
-    // Enumerated checks
+    // Enumerated checks. See the comment above `VALID_DEVICE_CHANNEL`
+    // for why we surface an info note rather than a high-severity
+    // error on values outside the core table.
     if (typeof payload.deviceChannel === 'string' && !VALID_DEVICE_CHANNEL.includes(payload.deviceChannel as typeof VALID_DEVICE_CHANNEL[number])) {
       issues.push({
         field: 'deviceChannel',
-        severity: 'high',
-        message: `deviceChannel "${payload.deviceChannel}" is not one of the valid values (01, 02, 03).`,
+        severity: 'info',
+        message: `deviceChannel "${payload.deviceChannel}" is not in the core table (01, 02, 03). If this is a 3RI subtype, verify against the EMV 3DS v2.x.0 appendix you are studying.`,
         specRef: 'Table A.1',
       });
     }

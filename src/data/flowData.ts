@@ -673,61 +673,10 @@ export const FLOW_STEPS: FlowStep[] = [
     target: null,
     specRef: '§3.3 Step 6 — The 3DS Server [Req 87–92, 422]; Table B.1',
     payloadType: 'json',
-    payload: {
-      messageType: 'AReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      threeDSServerRefNumber: 'SRV-REF-001',
-      threeDSRequestorID: 'REQ-MERCH-001',
-      threeDSRequestorURL: 'https://merchant.example.com/checkout',
-      notificationURL: 'https://gateway.payment.com/3ds-notify_url',
-      threeDSRequestorChallengeInd: ['01'],
-      threeDSCompInd: 'Y',
-      deviceChannel: '02',
-      messageCategory: '01',
-      acquirerBIN: '453201',
-      acquirerMerchantID: 'MERCH_987654321',
-      acctNumber: '4000123456789010',
-      merchantName: 'ExampleMart',
-      merchantCountryCode: '840',
-      mcc: '5411',
-      purchaseAmount: '27998',
-      purchaseCurrency: '840',
-      purchaseExponent: '2',
-      purchaseDate: '20260710160715',
-      acctID: 'cust-18370019',
-      billAddrCity: 'San Francisco',
-      billAddrCountry: '840',
-      shipAddrCity: 'San Francisco',
-      shipAddrCountry: '840',
-      merchantRiskIndicator: {
-        shipIndicator: '01',
-        deliveryTimeframe: '01',
-        reorderItemsInd: '01',
-        preOrderPurchaseInd: '01'
-      },
-      messageExtension: [
-        {
-          name: 'merchant-risk-v1',
-          id: 'ext-risk-001',
-          criticalityIndicator: false,
-          data: {
-            cartValueBand: 'mid',
-            accountAgeDays: 620
-          }
-        }
-      ],
-      browserIP: '198.51.100.42',
-      browserAcceptHeader: 'text/html,application/xhtml+xml',
-      browserLanguage: 'en-US',
-      browserUserAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
-      browserScreenWidth: '1920',
-      browserScreenHeight: '1080',
-      browserColorDepth: '24',
-      browserTZ: '-360',
-      browserJavaEnabled: 'false',
-      browserJavascriptEnabled: 'true'
-    },
+    // v2.1.0 / v2.2.0 / v2.3.1 / v2.4.0 — the wire shape is
+    // generated from the versioned payload registry. The active
+    // protocol version is read from `scenario.protocolVersion`.
+    messageType: 'AReq',
     payloadTitle: 'AReq Message Draft',
     isActive: () => true
   },
@@ -858,16 +807,8 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'S',
     specRef: '§3.3 Step 7 — [Req 95–101, 233, 235]; §A.9 Error Codes',
     payloadType: 'json',
-    payload: {
-      messageType: 'Erro',
-      messageVersion: '2.3.1',
-      errorCode: '405',
-      errorDescription: 'System Connection Failure',
-      errorDetail: 'DS unable to establish connection with ACS',
-      errorComponent: 'D',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4'
-    },
+    // Versioned via the payload registry; honours scenario.protocolVersion.
+    messageType: 'Erro',
     payloadTitle: 'DS Error Response',
     isActive: (s) => s.dsRouting === 'failure'
   },
@@ -997,18 +938,10 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 8 — [Req 110, 111] Format & send ARes to DS',
     payloadType: 'json',
-    payload: {
-      messageType: 'ARes',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      acsReferenceNumber: 'ACS-REF-34',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      transStatus: 'Y',
-      acsChallengeMandated: 'N',
-      eci: '05',
-      authenticationValue: 'AAABBiiihH8DAAAAAABiSBI='
-    },
+    // Versioned via the payload registry. v2.1.0 carries
+    // authenticationType (string); v2.3.1 carries authenticationMethod
+    // (expanded enum) and trustListStatus (renamed from whiteListStatus).
+    messageType: 'ARes',
     payloadTitle: 'ARes Message',
     isActive: (s) => s.dsRouting === 'normal'
   },
@@ -1545,17 +1478,11 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — RReq after successful challenge [Req 124–128]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'Y',
-      challengeCompletionInd: 'Y',
-      eci: '05',
-      authenticationValue: 'AAABBiiihH8DAAAAAABiSBI='
-    },
+    // Versioned via the payload registry. v2.1.0 carries
+    // authenticationType (renamed in v2.3.1 to authenticationMethod);
+    // v2.3.1 also gains cardholderInfo, challengeErrorReporting,
+    // deviceBindingStatus*, transStatusReasonInfo.
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Success)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'C' && s.challengeOutcome === 'success'
   },
@@ -1573,16 +1500,7 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — RReq after failed challenge [Req 124–128]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'N',
-      transStatusReason: '19',
-      challengeCompletionInd: 'Y'
-    },
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Failure)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'C' && s.challengeOutcome === 'failure'
   },
@@ -1600,16 +1518,7 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — Cancellation handling [Req 126, 127]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'N',
-      transStatusReason: '19',
-      challengeCancelationIndicator: '01'
-    },
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Cancelled)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'C' && s.challengeOutcome === 'cancelled'
   },
@@ -1627,15 +1536,7 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — Decoupled fallback [Req 465, 124–128]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'D',
-      resultsMessageStatus: '04'
-    },
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Decoupled Fallback)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'C' && s.challengeOutcome === 'decoupled'
   },
@@ -1653,17 +1554,7 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — RReq for Decoupled Authentication [Req 124–128, 347]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'Y',
-      authenticationValue: 'AAABBiiihH8DAAAAAABiSBI=',
-      eci: '05',
-      challengeCancelationIndicator: '04'
-    },
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Decoupled Direct)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'D'
   },
@@ -1681,16 +1572,7 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 16 — RReq for challenge opt-out [Req 117].a, 124–128',
     payloadType: 'json',
-    payload: {
-      messageType: 'RReq',
-      messageVersion: '2.3.1',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      acsTransID: 'c7d8e9f0-a1b2-c3d4-e5f6-a7b8c9d0e1f2',
-      transStatus: 'U',
-      transStatusReason: '24',
-      challengeCancelationIndicator: '03'
-    },
+    messageType: 'RReq',
     payloadTitle: 'RReq Message (Opt-Out)',
     isActive: (s) => s.dsRouting === 'normal' && s.transStatus === 'C' && s.challengeOutcome === 'optout'
   },
@@ -1731,12 +1613,10 @@ export const FLOW_STEPS: FlowStep[] = [
     target: 'DS',
     specRef: '§3.3 Step 18 — 3DS Server RReq handling [Req 132, 133, 466]',
     payloadType: 'json',
-    payload: {
-      messageType: 'RRes',
-      threeDSServerTransID: '8a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d',
-      dsTransID: 'd9e8f7a6-b5c4-d3e2-f1a0-b9c8d7e6f5a4',
-      resultsStatus: '01'
-    },
+    // Versioned via the payload registry. The RRes shape is stable
+    // across v2.1.0 / v2.2.0 / v2.3.1; the builder emits the same
+    // fields for all three.
+    messageType: 'RRes',
     payloadTitle: 'RRes Message',
     isActive: (s) => s.dsRouting === 'normal' && (s.transStatus === 'C' || s.transStatus === 'D')
   },
@@ -3186,3 +3066,42 @@ export const GLOSSARY: GlossaryEntry[] = [
   { term: 'Liability Shift', definition: 'A commercial rule: when 3DS authenticates a transaction, the chargeback liability moves from the merchant to the issuer.', specRef: '§1.4 — Liability' },
   { term: 'Frictionless Rate', definition: 'The percentage of transactions that complete without a challenge. Driven by data quality (AReq + 3DS Method) and issuer risk model.', specRef: 'Operational metric' },
 ];
+
+/**
+ * Risk taxonomy — single source of truth for the Security Lens's
+ * inferred risk level. Previously these three Sets lived inside
+ * `DetailsPanel.tsx`, which meant edits to the per-step entries in
+ * `SECURITY_LENS_BY_STEP` could drift away from the inferred risk
+ * without anyone noticing. Now the Sets are co-located with the
+ * per-step notes, and `inferRiskLevelForStep` is the only function
+ * the panel calls.
+ */
+export const HIGH_RISK_STEPS = new Set<string>([
+  'step_10e', 'step_11a', 'step_11b', 'step_16e', 'step_16f', 'step_17',
+  'step_21a', 'step_21b', 'step_21c', 'step_22e',
+]);
+
+export const CRITICAL_RISK_STEPS = new Set<string>(['step_22_invalid']);
+
+export const MEDIUM_RISK_STEPS = new Set<string>([
+  'step_3b', 'step_4b', 'step_5', 'step_6a', 'step_7a', 'step_7err1', 'step_8a',
+  'step_10c', 'step_10d', 'step_12', 'step_15b', 'step_21_err', 'step_21_close',
+  'step_22d', 'step_22f', 'step_22g',
+]);
+
+/**
+ * Look up the inferred risk level for a step. Per-step entries in
+ * `SECURITY_LENS_BY_STEP` take precedence; only when the entry omits
+ * `riskLevel` do we fall back to the taxonomy Sets. Returns
+ * `'low'` when nothing else matches.
+ */
+export function inferRiskLevelForStep(
+  stepId: string,
+  explicitRiskLevel?: SecurityLensNote['riskLevel'],
+): NonNullable<SecurityLensNote['riskLevel']> {
+  if (explicitRiskLevel) return explicitRiskLevel;
+  if (CRITICAL_RISK_STEPS.has(stepId)) return 'critical';
+  if (HIGH_RISK_STEPS.has(stepId)) return 'high';
+  if (MEDIUM_RISK_STEPS.has(stepId)) return 'medium';
+  return 'low';
+}

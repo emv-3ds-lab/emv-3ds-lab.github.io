@@ -14,9 +14,20 @@ Please avoid posting sensitive details in a public issue first.
 
 Preferred approach:
 
-1. Use GitHub Security Advisories or another private maintainer contact channel if available.
-2. Share a clear description, affected files or screens, reproduction steps, and impact.
-3. Include protocol anchors if the issue is about EMV 3DS semantics rather than only app behavior.
+1. Open a GitHub Security Advisory for this repository when possible.
+2. If Advisory flow is unavailable, email `md.wasif.faisal@g.bracu.ac.bd` with the repository name in the subject line.
+3. Share a clear description, affected files or screens, reproduction steps, and impact.
+4. Include protocol anchors if the issue is about EMV 3DS semantics rather than only app behavior.
+
+Private reporting channels currently supported:
+
+- GitHub Security Advisories for repository-scoped disclosure
+- Maintainer email: `md.wasif.faisal@g.bracu.ac.bd`
+
+Encrypted reporting:
+
+- A public GPG key is not published for this repository yet.
+- If you need encrypted coordination before a key is added, open a private GitHub Security Advisory first and request an alternate channel.
 
 ## What to include
 
@@ -38,6 +49,7 @@ Default expectations:
 - acknowledge receipt as quickly as possible
 - validate and scope the report
 - coordinate on a reasonable disclosure timeline for confirmed issues
+- target a 90-day disclosure window for confirmed issues unless both parties agree on a different timeline
 - avoid publicizing dangerous details before a fix or mitigation exists
 
 ## Out of scope

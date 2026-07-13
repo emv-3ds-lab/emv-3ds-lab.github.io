@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://emv-3ds-lab.github.io/sitemap.xml
